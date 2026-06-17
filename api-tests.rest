@@ -27,5 +27,24 @@ Content-Type: application/json
   "password": "123456"
 }
 
+###
 
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
 
+{
+  "name": "Dana",
+  "email": "dana@gmail.com",
+  "password": "123456"
+}
+
+###
+
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Noam",
+  "email": "noam@gmail.com",
+  "password": "123456"
+}
