@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const bcrypt = require("bcrypt");
 
 // Handle user registration requests
 const register = async (req, res) => {
@@ -35,7 +36,7 @@ const register = async (req, res) => {
 };
 
 // Handle user login requests
-const login = (req, res) => {
+const login = async (req, res) => {
   // Extract login fields from the request body
   const { email, password } = req.body;
 
@@ -47,12 +48,32 @@ const login = (req, res) => {
     });
   }
 
+  // Find a user by email
+  const user = await User.findOne({ email });
+
+  // Check if the user exists
+  if (!user) {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid email or password",
+    });
+  }
+
+  // Compare the provided password with the hashed password in the database
+  const isPasswordMatch = await bcrypt.compare(password, user.password);
+
+  // Check if the password is correct
+  if (!isPasswordMatch) {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid email or password",
+    });
+  }
+  
   res.status(200).json({
     success: true,
-    message: "Login data received successfully",
-    user: {
-      email,
-    },
+    message: "Login successful",
+    user,
   });
 };
 

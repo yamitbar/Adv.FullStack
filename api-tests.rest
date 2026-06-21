@@ -62,3 +62,34 @@ Content-Type: application/json
 {
   "name": "Yam"
 }
+
+###
+DELETE http://localhost:3000/api/users/6a32d2f25d17c75316c35266
+
+###
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "yamit@example.com",
+  "password": "123456"
+}
+
+###
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Bcrypt Test",
+  "email": "bcrypt@test.com",
+  "password": "123456"
+}
+
+###
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "bcrypt@test.com",
+  "password": "123456"
+}
