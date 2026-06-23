@@ -1,5 +1,15 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+
+// Generate a JWT for an authenticated user
+const generateToken = (userId) => {
+  return jwt.sign(
+    { id: userId },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN }
+  );
+};
 
 // Handle user registration requests
 const register = async (req, res) => {
@@ -69,11 +79,15 @@ const login = async (req, res) => {
       message: "Invalid email or password",
     });
   }
+
+  // Generate a JWT for the authenticated user
+  const token = generateToken(user._id);
   
   res.status(200).json({
     success: true,
     message: "Login successful",
     user,
+    token,
   });
 };
 
