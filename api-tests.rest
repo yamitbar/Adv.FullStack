@@ -102,3 +102,30 @@ Content-Type: application/json
   "email": "bcrypt@test.com",
   "password": "wrongpassword"
 }
+
+###
+GET http://localhost:5000/api/users
+
+
+###
+GET http://localhost:3000/api/users
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMzdiNzIxYmYxMmEwMzcyOTMxOTRjZSIsImlhdCI6MTc4MjY1NTYyNCwiZXhwIjoxNzgzMjYwNDI0fQ.nrOZoIfynguXnmT-njcfdm8WwMek6dvNBo1HKgbuuLc
+
+###
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "yarden",
+  "email": "yarden@example.com",
+  "password": "123456"
+}
+
+###
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "yarden@example.com",
+  "password": "123456"
+}
