@@ -10,9 +10,12 @@ const {
   deleteUser,
 } = require("../controllers/userController");
 
+// Import authentication middleware
+const { protect } = require("../middleware/authMiddleware");
+
 // GET /
 // Return all users from the database
-router.get("/", getUsers);
+router.get("/", protect, getUsers);
 
 // GET /:id
 // Return a single user by MongoDB id
