@@ -2,6 +2,7 @@
 const express = require("express");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
+const tripRoutes = require("./routes/tripRoutes");
 
 // Create the Express app
 const app = express();
@@ -11,8 +12,9 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/trips", tripRoutes);
 
-// Health check route
+// Health check routes
 app.get("/", (req, res) => {
   res.send("Pathly API is running");
 });

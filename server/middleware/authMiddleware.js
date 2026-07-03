@@ -24,7 +24,7 @@ const protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Find the logged-in user and attach it to the request object
-    req.user = await User.findById(decoded.userId).select("-password");
+    req.user = await User.findById(decoded.id).select("-password");
 
     // Continue to the next middleware or controller
     next();

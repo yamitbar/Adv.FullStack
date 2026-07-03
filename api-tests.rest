@@ -129,3 +129,16 @@ Content-Type: application/json
   "email": "yarden@example.com",
   "password": "123456"
 }
+
+###
+POST http://localhost:3000/api/trips
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzA3MDIxMywiZXhwIjoxNzgzNjc1MDEzfQ.ZfTluezDkb3DSPJiKFh31-9-P23c4mIUPGx3x3FZBVw
+
+{
+  "title": "USA Family Trip",
+  "description": "Summer vacation with the family",
+  "destination": "United States",
+  "startDate": "2026-08-01",
+  "endDate": "2026-08-20"
+}
