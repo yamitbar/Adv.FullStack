@@ -142,3 +142,99 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkM
   "startDate": "2026-08-01",
   "endDate": "2026-08-20"
 }
+
+###
+GET http://localhost:3000/api/trips
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzA3MDIxMywiZXhwIjoxNzgzNjc1MDEzfQ.ZfTluezDkb3DSPJiKFh31-9-P23c4mIUPGx3x3FZBVw
+
+###
+
+GET http://localhost:3000/api/trips/6a477f48edaa51a7f2acaf1c
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyMjAzOSwiZXhwIjoxNzgzOTI2ODM5fQ.HWZTmDa72_Rg3P6hTW9oe9ByyN6utSKlN73ccNENy8w
+
+###id is false
+GET http://localhost:3000/api/trips/507f1f77bcf86cd799439011
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyMjAzOSwiZXhwIjoxNzgzOTI2ODM5fQ.HWZTmDa72_Rg3P6hTW9oe9ByyN6utSKlN73ccNENy8w
+
+
+###
+PUT http://localhost:3000/api/trips/6a477f48edaa51a7f2acaf1c
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyMjAzOSwiZXhwIjoxNzgzOTI2ODM5fQ.HWZTmDa72_Rg3P6hTW9oe9ByyN6utSKlN73ccNENy8w
+Content-Type: application/json
+
+{
+  "title": "USA Family Trip Updated",
+  "description": "Updated summer vacation with the family",
+  "destination": "United States",
+  "startDate": "2026-08-01",
+  "endDate": "2026-08-20"
+}
+
+
+###
+PUT http://localhost:3000/api/trips/507f1f77bcf86cd799439011
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyMjAzOSwiZXhwIjoxNzgzOTI2ODM5fQ.HWZTmDa72_Rg3P6hTW9oe9ByyN6utSKlN73ccNENy8w
+Content-Type: application/json
+
+{
+  "title": "Test"
+}
+
+####
+DELETE http://localhost:3000/api/trips/6a4b60250a3591de1a39f18a
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyNDY0MSwiZXhwIjoxNzgzOTI5NDQxfQ.yZdhNxZYdC66DUMkQkGFw7z7G2bL9nqy11Hhhp_xTc0
+
+###
+GET http://localhost:3000/api/trips/6a477f48edaa51a7f2acaf1c
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyNDY0MSwiZXhwIjoxNzgzOTI5NDQxfQ.yZdhNxZYdC66DUMkQkGFw7z7G2bL9nqy11Hhhp_xTc0
+
+
+###
+POST http://localhost:3000/api/trips/join
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyNzE1NCwiZXhwIjoxNzgzOTMxOTU0fQ.-r10aTYDrS-ZbxcSuS0Oqqq25qCwDwQVvo1SnBiCxEY
+Content-Type: application/json
+
+{
+  "inviteCode": "PTR-2DLL"
+}
+
+###
+POST http://localhost:3000/api/trips
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyNzE1NCwiZXhwIjoxNzgzOTMxOTU0fQ.-r10aTYDrS-ZbxcSuS0Oqqq25qCwDwQVvo1SnBiCxEY
+Content-Type: application/json
+
+{
+  "title": "Italy Family Trip",
+  "description": "Test trip for join flow",
+  "destination": "Italy",
+  "startDate": "2026-09-01",
+  "endDate": "2026-09-10"
+}
+
+###
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "nadav",
+  "email": "nadav@example.com",
+  "password": "555555"
+}
+
+###
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "nadav@example.com",
+  "password": "555555"
+}
+
+###
+POST http://localhost:3000/api/trips/join
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNGI2YTQzMjUyNTBiZDMzN2ZhODgyNyIsImlhdCI6MTc4MzMyNzMxMywiZXhwIjoxNzgzOTMyMTEzfQ.hoek_Y54CEXx9t2M7076of6gN3vZJpBshu4LbieopHU
+Content-Type: application/json
+
+{
+  "inviteCode": "PTR-2DLL"
+}
