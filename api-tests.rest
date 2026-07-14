@@ -1,116 +1,4 @@
-POST http://localhost:3000/api/auth/register
-Content-Type: application/json
-
-{
-  "name": "Yamit",
-  "email": "yamit@gmail.com",
-  "password": "123456"
-}
-
-###
-POST http://localhost:3000/api/auth/register
-Content-Type: application/json
-
-{
-  "name": "Yamit",
-  "email": "yamit@example.com",
-  "password": "123456"
-}
-
-###
-
-POST http://localhost:3000/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "yamit@example.com",
-  "password": "123456"
-}
-
-###
-
-POST http://localhost:3000/api/auth/register
-Content-Type: application/json
-
-{
-  "name": "Dana",
-  "email": "dana@gmail.com",
-  "password": "123456"
-}
-
-###
-
-POST http://localhost:3000/api/auth/register
-Content-Type: application/json
-
-{
-  "name": "Dana",
-  "email": "dana@gmail.com",
-  "password": "123456"
-}
-
-### Get all users
-GET http://localhost:3000/api/users
-
-### Get user by id
-GET http://localhost:3000/api/users/6a32d2f25d17c75316c35266
-
-### 
-PUT http://localhost:3000/api/users/6a32d2f25d17c75316c35266
-Content-Type: application/json
-
-{
-  "name": "Yam"
-}
-
-###
-DELETE http://localhost:3000/api/users/6a32d2f25d17c75316c35266
-
-###
-POST http://localhost:3000/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "yamit@example.com",
-  "password": "123456"
-}
-
-###
-POST http://localhost:3000/api/auth/register
-Content-Type: application/json
-
-{
-  "name": "Bcrypt Test",
-  "email": "bcrypt@test.com",
-  "password": "123456"
-}
-
-###
-POST http://localhost:3000/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "bcrypt@test.com",
-  "password": "123456"
-}
-
-###
-POST http://localhost:3000/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "bcrypt@test.com",
-  "password": "wrongpassword"
-}
-
-###
-GET http://localhost:5000/api/users
-
-
-###
-GET http://localhost:3000/api/users
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMzdiNzIxYmYxMmEwMzcyOTMxOTRjZSIsImlhdCI6MTc4MjY1NTYyNCwiZXhwIjoxNzgzMjYwNDI0fQ.nrOZoIfynguXnmT-njcfdm8WwMek6dvNBo1HKgbuuLc
-
+############ users TESTS ############
 ###
 POST http://localhost:3000/api/auth/register
 Content-Type: application/json
@@ -128,87 +16,6 @@ Content-Type: application/json
 {
   "email": "yarden@example.com",
   "password": "123456"
-}
-
-###
-POST http://localhost:3000/api/trips
-Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzA3MDIxMywiZXhwIjoxNzgzNjc1MDEzfQ.ZfTluezDkb3DSPJiKFh31-9-P23c4mIUPGx3x3FZBVw
-
-{
-  "title": "USA Family Trip",
-  "description": "Summer vacation with the family",
-  "destination": "United States",
-  "startDate": "2026-08-01",
-  "endDate": "2026-08-20"
-}
-
-###
-GET http://localhost:3000/api/trips
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzA3MDIxMywiZXhwIjoxNzgzNjc1MDEzfQ.ZfTluezDkb3DSPJiKFh31-9-P23c4mIUPGx3x3FZBVw
-
-###
-
-GET http://localhost:3000/api/trips/6a477f48edaa51a7f2acaf1c
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyMjAzOSwiZXhwIjoxNzgzOTI2ODM5fQ.HWZTmDa72_Rg3P6hTW9oe9ByyN6utSKlN73ccNENy8w
-
-###id is false
-GET http://localhost:3000/api/trips/507f1f77bcf86cd799439011
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyMjAzOSwiZXhwIjoxNzgzOTI2ODM5fQ.HWZTmDa72_Rg3P6hTW9oe9ByyN6utSKlN73ccNENy8w
-
-
-###
-PUT http://localhost:3000/api/trips/6a477f48edaa51a7f2acaf1c
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyMjAzOSwiZXhwIjoxNzgzOTI2ODM5fQ.HWZTmDa72_Rg3P6hTW9oe9ByyN6utSKlN73ccNENy8w
-Content-Type: application/json
-
-{
-  "title": "USA Family Trip Updated",
-  "description": "Updated summer vacation with the family",
-  "destination": "United States",
-  "startDate": "2026-08-01",
-  "endDate": "2026-08-20"
-}
-
-
-###
-PUT http://localhost:3000/api/trips/507f1f77bcf86cd799439011
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyMjAzOSwiZXhwIjoxNzgzOTI2ODM5fQ.HWZTmDa72_Rg3P6hTW9oe9ByyN6utSKlN73ccNENy8w
-Content-Type: application/json
-
-{
-  "title": "Test"
-}
-
-####
-DELETE http://localhost:3000/api/trips/6a4b60250a3591de1a39f18a
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyNDY0MSwiZXhwIjoxNzgzOTI5NDQxfQ.yZdhNxZYdC66DUMkQkGFw7z7G2bL9nqy11Hhhp_xTc0
-
-###
-GET http://localhost:3000/api/trips/6a477f48edaa51a7f2acaf1c
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyNDY0MSwiZXhwIjoxNzgzOTI5NDQxfQ.yZdhNxZYdC66DUMkQkGFw7z7G2bL9nqy11Hhhp_xTc0
-
-
-###
-POST http://localhost:3000/api/trips/join
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyNzE1NCwiZXhwIjoxNzgzOTMxOTU0fQ.-r10aTYDrS-ZbxcSuS0Oqqq25qCwDwQVvo1SnBiCxEY
-Content-Type: application/json
-
-{
-  "inviteCode": "PTR-2DLL"
-}
-
-###
-POST http://localhost:3000/api/trips
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4MzMyNzE1NCwiZXhwIjoxNzgzOTMxOTU0fQ.-r10aTYDrS-ZbxcSuS0Oqqq25qCwDwQVvo1SnBiCxEY
-Content-Type: application/json
-
-{
-  "title": "Italy Family Trip",
-  "description": "Test trip for join flow",
-  "destination": "Italy",
-  "startDate": "2026-09-01",
-  "endDate": "2026-09-10"
 }
 
 ###
@@ -231,10 +38,95 @@ Content-Type: application/json
 }
 
 ###
-POST http://localhost:3000/api/trips/join
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNGI2YTQzMjUyNTBiZDMzN2ZhODgyNyIsImlhdCI6MTc4MzMyNzMxMywiZXhwIjoxNzgzOTMyMTEzfQ.hoek_Y54CEXx9t2M7076of6gN3vZJpBshu4LbieopHU
+POST http://localhost:3000/api/auth/register
 Content-Type: application/json
 
 {
-  "inviteCode": "PTR-2DLL"
+  "name": "amir",
+  "email": "amir@example.com",
+  "password": "555555"
 }
+
+###
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "amir@example.com",
+  "password": "555555"
+}
+
+
+############ YOUR TESTS ############
+### Create Trip
+POST http://localhost:3000/api/trips
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4NDA1NDc1NiwiZXhwIjoxNzg0NjU5NTU2fQ.fhzUXRvDhULFxjh8wn5TvkY9NSfBwSqmc0WyEj1wI8s
+
+{
+  "title": "USA Family Trip",
+  "description": "Summer vacation with the family",
+  "destination": "United States",
+  "startDate": "2026-08-01",
+  "endDate": "2026-08-20",
+  "coverImage": ""
+}
+
+### Create Location
+POST http://localhost:3000/api/trips/6a5683fb768f819789ba2002/locations
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4NDA1NjA0MywiZXhwIjoxNzg0NjYwODQzfQ.DsjMs-hBJiUayBuSNEh2FLsyl-uaSt1GDw-wQQ8_78M
+
+{
+  "title": "Sunset View",
+  "placeName": "Grand Canyon National Park",
+  "address": "Arizona, USA",
+  "lat": 36.1069,
+  "lng": -112.1129,
+  "googlePlaceId": "test-google-place-id",
+  "coverImage": "",
+  "visitedAt": "2026-08-08"
+}
+
+### Create Memory
+POST http://localhost:3000/api/locations/6a56899fea6b8038631eb461/memories
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4NDA1ODA0MCwiZXhwIjoxNzg0NjYyODQwfQ.bkkxc9szBGOMQXIeE_k_47LzrH4p_S_DMnFIPLdQ7vY
+
+{
+  "content": "An amazing day at the Grand Canyon",
+  "images": [
+    "/uploads/grand-canyon-1.jpg",
+    "/uploads/grand-canyon-2.jpg"
+  ],
+  "videos": []
+}
+
+### Upload Images To Memory
+POST http://localhost:3000/api/memories/6a5690f96739a491449275a7/images
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4NDA1ODA0MCwiZXhwIjoxNzg0NjYyODQwfQ.bkkxc9szBGOMQXIeE_k_47LzrH4p_S_DMnFIPLdQ7vY
+Content-Type: multipart/form-data; boundary=PathlyBoundary
+
+--PathlyBoundary
+Content-Disposition: form-data; name="images"; filename="photo1.jpg"
+Content-Type: image/jpeg
+
+< "C:\Users\barka\Pictures\Screenshots\צילום מסך 2026-07-14 084428.png"
+--PathlyBoundary
+Content-Disposition: form-data; name="images"; filename="photo2.jpg"
+Content-Type: image/jpeg
+
+< "C:\Users\barka\Pictures\Screenshots\צילום מסך 2026-07-14 084458.png"
+--PathlyBoundary--
+
+### Upload One Image To Memory
+POST http://localhost:3000/api/memories/6a5690f96739a491449275a7/images
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4NDA1ODA0MCwiZXhwIjoxNzg0NjYyODQwfQ.bkkxc9szBGOMQXIeE_k_47LzrH4p_S_DMnFIPLdQ7vY
+Content-Type: multipart/form-data; boundary=PathlyBoundary
+
+--PathlyBoundary
+Content-Disposition: form-data; name="images"; filename="test-image.jpg"
+Content-Type: image/jpeg
+
+< ./test-image.jpg
+--PathlyBoundary--
