@@ -56,6 +56,24 @@ Content-Type: application/json
   "password": "555555"
 }
 
+###
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "ella",
+  "email": "ella@example.com",
+  "password": "666666"
+}
+
+###
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "ella@example.com",
+  "password": "666666"
+}
 
 ############ YOUR TESTS ############
 ### Create Trip
@@ -130,3 +148,26 @@ Content-Type: image/jpeg
 
 < ./test-image.jpg
 --PathlyBoundary--
+
+
+######## Additional Tests ########
+GET http://localhost:3000/api/not-existing
+
+#### Test the root endpoint
+GET http://localhost:3000/
+
+
+###
+GET http://localhost:3000/
+
+###########
+### Register
+
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Backend Test User",
+  "email": "backendtest@example.com",
+  "password": "123456"
+}
