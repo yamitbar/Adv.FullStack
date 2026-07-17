@@ -1,0 +1,240 @@
+.create-trip-page {
+  width: min(1180px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 8.5rem 0 6rem;
+}
+
+.create-trip-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  align-items: start;
+  gap: 4rem;
+}
+
+.create-trip-introduction {
+  position: sticky;
+  top: 8.5rem;
+}
+
+.create-trip-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 3rem;
+  color: #355f50;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.create-trip-introduction h1 {
+  margin: 0.6rem 0 1rem;
+  color: #10261e;
+  font-size: clamp(3rem, 6vw, 5.4rem);
+  line-height: 0.95;
+}
+
+.create-trip-introduction > p {
+  max-width: 540px;
+  margin: 0;
+  color: #65736d;
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+
+.create-trip-feature-list {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 3rem;
+}
+
+.create-trip-feature-list > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.create-trip-feature-list > div > span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  place-items: center;
+  border-radius: 16px;
+  color: #286b52;
+  background: #e7f0eb;
+}
+
+.create-trip-feature-list strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: #173229;
+  font-size: 1rem;
+}
+
+.create-trip-feature-list p {
+  margin: 0;
+  color: #6b7771;
+  line-height: 1.55;
+}
+
+.create-trip-card {
+  padding: 2.25rem;
+  border: 1px solid rgba(25, 72, 55, 0.12);
+  border-radius: 2rem;
+  background: #ffffff;
+  box-shadow: 0 22px 55px rgba(24, 58, 45, 0.09);
+}
+
+.create-trip-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1.75rem;
+  border-bottom: 1px solid rgba(25, 72, 55, 0.1);
+}
+
+.create-trip-icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  place-items: center;
+  border-radius: 20px;
+  color: #ffffff;
+  background: #286b52;
+}
+
+.create-trip-card-heading h2 {
+  margin: 0 0 0.25rem;
+  color: #10261e;
+  font-size: 1.55rem;
+}
+
+.create-trip-card-heading p {
+  margin: 0;
+  color: #728079;
+}
+
+.create-trip-form {
+  display: grid;
+  gap: 1.4rem;
+  margin-top: 1.75rem;
+}
+
+.create-trip-form label {
+  display: grid;
+  gap: 0.55rem;
+  color: #18352a;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.create-trip-form input,
+.create-trip-form textarea {
+  width: 100%;
+  border: 1px solid rgba(28, 72, 55, 0.18);
+  border-radius: 1rem;
+  background: #fbfcfa;
+  color: #10261e;
+  font: inherit;
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.create-trip-form input {
+  min-height: 54px;
+  padding: 0 1rem;
+}
+
+.create-trip-form textarea {
+  min-height: 130px;
+  padding: 1rem;
+  resize: vertical;
+}
+
+.create-trip-form input:focus,
+.create-trip-form textarea:focus {
+  border-color: #377d61;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(55, 125, 97, 0.12);
+}
+
+.create-trip-date-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.create-trip-preview {
+  overflow: hidden;
+  height: 220px;
+  border-radius: 1.25rem;
+  background: #e7efeb;
+}
+
+.create-trip-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.create-trip-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  padding-top: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .create-trip-shell {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+
+  .create-trip-introduction {
+    position: static;
+  }
+
+  .create-trip-feature-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .create-trip-feature-list > div {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 700px) {
+  .create-trip-page {
+    padding: 7.5rem 0 4rem;
+  }
+
+  .create-trip-feature-list {
+    grid-template-columns: 1fr;
+  }
+
+  .create-trip-feature-list > div {
+    flex-direction: row;
+  }
+
+  .create-trip-card {
+    padding: 1.4rem;
+    border-radius: 1.5rem;
+  }
+
+  .create-trip-date-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .create-trip-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .create-trip-actions .button {
+    justify-content: center;
+  }
+}

@@ -1,15 +1,18 @@
 import { useState } from "react";
+
 import {
   ArrowRight,
   Compass,
   Eye,
   EyeOff,
 } from "lucide-react";
+
 import {
   Link,
   useLocation,
   useNavigate,
 } from "react-router-dom";
+
 import { useAuth } from "../context/AuthContext";
 
 function Login() {
@@ -32,7 +35,11 @@ function Login() {
   const location = useLocation();
 
   const destination =
-    location.state?.from?.pathname || "/trips";
+    location.state?.from?.pathname || "/";
+
+  const successMessage =
+    location.state?.message || "";
+
 
   const handleChange = (event) => {
     clearAuthError();
@@ -61,6 +68,7 @@ function Login() {
           <span className="brand-mark">
             <Compass size={22} />
           </span>
+
           <span className="brand-name">
             Pathly
           </span>
@@ -77,6 +85,12 @@ function Login() {
             Log in to revisit your trips, places
             and shared memories.
           </p>
+
+          {successMessage && (
+            <div className="form-success">
+              {successMessage}
+            </div>
+          )}
 
           {error && (
             <div className="form-error">

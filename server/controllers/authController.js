@@ -2,83 +2,89 @@ const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const generateToken = require("../utils/generateToken");
 
+// Create a safe user object without exposing the password
+const formatUser = (user) => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+});
+
 // Handle user registration requests
-const register = async (req, res) => {
+const register = async (req, res, next) => {
   try {
-    // Extract registration fields from the request body
     const { name, email, password } = req.body;
 
-    // Check if all required fields were provided
-    if (!name || !email || !password) {
-      return res.status(400).json({
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res.status(409).json({
         success: false,
-        message: "Name, email, and password are required",
+        message: "An account with this email already exists",
       });
     }
 
-    // Create a new user document in MongoDB
     const user = await User.create({
       name,
       email,
       password,
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "User registered successfully",
-      user,
+      user: formatUser(user),
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return next(error);
   }
 };
 
 // Handle user login requests
-const login = async (req, res) => {
-  // Extract login fields from the request body
-  const { email, password } = req.body;
+const login = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
 
-  // Check if all required fields were provided
-  if (!email || !password) {
-    return res.status(400).json({
-      success: false,
-      message: "Email and password are required",
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    const isPasswordMatch = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!isPasswordMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    const token = generateToken(user._id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      user: formatUser(user),
+      token,
     });
+  } catch (error) {
+    return next(error);
   }
+};
 
-  // Find a user by email
-  const user = await User.findOne({ email });
-
-  // Check if the user exists
-  if (!user) {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid email or password",
-    });
-  }
-
-  // Compare the provided password with the hashed password in the database
-  const isPasswordMatch = await bcrypt.compare(password, user.password);
-
-  // Check if the password is correct
-  if (!isPasswordMatch) {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid email or password",
-    });
-  }
-
-  // Generate a JWT for the authenticated user
-  const token = generateToken(user._id);
-  
-  res.status(200).json({
+// Return the currently authenticated user
+const getMe = async (req, res) => {
+  return res.status(200).json({
     success: true,
-    message: "Login successful",
-    user,
-    token,
+    user: formatUser(req.user),
   });
 };
 
@@ -86,4 +92,5 @@ const login = async (req, res) => {
 module.exports = {
   register,
   login,
+  getMe,
 };

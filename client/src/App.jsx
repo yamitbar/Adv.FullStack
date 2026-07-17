@@ -2,6 +2,7 @@ import {
   lazy,
   Suspense,
 } from "react";
+
 import {
   Route,
   Routes,
@@ -20,6 +21,18 @@ const Login = lazy(() =>
 
 const Register = lazy(() =>
   import("./pages/Register")
+);
+
+const MyTrips = lazy(() =>
+  import("./pages/MyTrips")
+);
+
+const CreateTrip = lazy(() =>
+  import("./pages/CreateTrip")
+);
+
+const TripDetails = lazy(() =>
+  import("./pages/TripDetails")
 );
 
 const NotFound = lazy(() =>
@@ -50,10 +63,7 @@ function App() {
             path="/trips"
             element={
               <ProtectedRoute>
-                <PlaceholderPage
-                  title="My Trips"
-                  description="Your complete trip dashboard is the next screen we will build."
-                />
+                <MyTrips />
               </ProtectedRoute>
             }
           />
@@ -62,9 +72,39 @@ function App() {
             path="/trips/new"
             element={
               <ProtectedRoute>
+                <CreateTrip />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/trips/:tripId"
+            element={
+              <ProtectedRoute>
+                <TripDetails />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/trips/:tripId/locations/new"
+            element={
+              <ProtectedRoute>
                 <PlaceholderPage
-                  title="Create a Trip"
-                  description="The trip creation experience will connect directly to the Pathly API."
+                  title="Add Location"
+                  description="The location creation form will be connected to Google Places and the Pathly API next."
+                />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/locations/:locationId"
+            element={
+              <ProtectedRoute>
+                <PlaceholderPage
+                  title="Location Memories"
+                  description="The complete location and memories experience will be built after location creation."
                 />
               </ProtectedRoute>
             }

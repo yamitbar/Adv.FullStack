@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -13,7 +14,16 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem("user");
 
-    return storedUser ? JSON.parse(storedUser) : null;
+    if (!storedUser) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(storedUser);
+    } catch {
+      localStorage.removeItem("user");
+      return null;
+    }
   });
 
   const [token, setToken] = useState(() =>
@@ -21,8 +31,44 @@ export const AuthProvider = ({ children }) => {
   );
 
   const [loading, setLoading] = useState(false);
-
+  const [initializing, setInitializing] = useState(
+    Boolean(localStorage.getItem("token"))
+  );
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const restoreSession = async () => {
+      const storedToken =
+        localStorage.getItem("token");
+
+      if (!storedToken) {
+        setInitializing(false);
+        return;
+      }
+
+      try {
+        const { data } = await api.get("/auth/me");
+
+        localStorage.setItem(
+          "user",
+          JSON.stringify(data.user)
+        );
+
+        setToken(storedToken);
+        setUser(data.user);
+      } catch {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+
+        setToken(null);
+        setUser(null);
+      } finally {
+        setInitializing(false);
+      }
+    };
+
+    restoreSession();
+  }, []);
 
   const login = async (credentials) => {
     setLoading(true);
@@ -45,15 +91,19 @@ export const AuthProvider = ({ children }) => {
 
       return data;
     } catch (loginError) {
+      const responseData =
+        loginError?.response?.data;
+
       const message =
-        loginError.response?.data?.message ||
-        "Login failed";
+        typeof responseData === "string"
+          ? responseData
+          : responseData?.message ||
+            loginError?.message ||
+            "Login failed";
 
       setError(message);
       throw loginError;
-    } finally {
-      setLoading(false);
-    }
+}
   };
 
   const register = async (userData) => {
@@ -97,14 +147,21 @@ export const AuthProvider = ({ children }) => {
       user,
       token,
       loading,
+      initializing,
       error,
-      isAuthenticated: Boolean(token),
+      isAuthenticated: Boolean(token && user),
       login,
       register,
       logout,
       clearAuthError,
     }),
-    [user, token, loading, error]
+    [
+      user,
+      token,
+      loading,
+      initializing,
+      error,
+    ]
   );
 
   return (
