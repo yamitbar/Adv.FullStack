@@ -150,17 +150,8 @@ Content-Type: image/jpeg
 --PathlyBoundary--
 
 
-######## Additional Tests ########
-GET http://localhost:3000/api/not-existing
+######## Additional Tests ################################
 
-#### Test the root endpoint
-GET http://localhost:3000/
-
-
-###
-GET http://localhost:3000/
-
-###########
 ### Register
 
 POST http://localhost:3000/api/auth/register
@@ -171,3 +162,194 @@ Content-Type: application/json
   "email": "backendtest@example.com",
   "password": "123456"
 }
+
+### Login
+
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "backendtest@example.com",
+  "password": "123456"
+}
+
+##token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzA1OSwiZXhwIjoxNzg0NzIxODU5fQ.LkHRTsUsd8SRe2iP6Jx9rLr7bY4lP8S8oV8wFtduZjI
+
+### Login Wrong Password
+
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "backendtest@example.com",
+  "password": "wrongpassword"
+}
+
+
+### Get Trips Without Token
+
+GET http://localhost:3000/api/trips
+
+### Create Trip
+
+POST http://localhost:3000/api/trips
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzA1OSwiZXhwIjoxNzg0NzIxODU5fQ.LkHRTsUsd8SRe2iP6Jx9rLr7bY4lP8S8oV8wFtduZjI
+Content-Type: application/json
+
+{
+  "title": "NEW YORK TRIP",
+  "description": "Testing backend",
+  "destination": "Japan",
+  "startDate": "2026-10-01",
+  "endDate": "2026-10-15",
+  "coverImage": ""
+}
+
+##"_id: 6a5777b8dd96e4cd7fe4ca40
+##inviteCode: PTR-QYP
+
+### Get Trips
+
+GET http://localhost:3000/api/trips
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzA1OSwiZXhwIjoxNzg0NzIxODU5fQ.LkHRTsUsd8SRe2iP6Jx9rLr7bY4lP8S8oV8wFtduZjI
+
+
+### Get Trip By ID
+
+GET http://localhost:3000/api/trips/6a5777b8dd96e4cd7fe4ca40
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzA1OSwiZXhwIjoxNzg0NzIxODU5fQ.LkHRTsUsd8SRe2iP6Jx9rLr7bY4lP8S8oV8wFtduZjI
+
+
+### Update Trip
+
+PUT http://localhost:3000/api/trips/6a5777b8dd96e4cd7fe4ca40
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzA1OSwiZXhwIjoxNzg0NzIxODU5fQ.LkHRTsUsd8SRe2iP6Jx9rLr7bY4lP8S8oV8wFtduZjI
+Content-Type: application/json
+
+{
+  "title": "Updated Backend Trip"
+}
+
+### Join Trip
+
+POST http://localhost:3000/api/trips/join
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4NDExNzMzOSwiZXhwIjoxNzg0NzIyMTM5fQ.G8aqGtZNetOvKtIP9rygMxckbJ10Jojmf3sBaktf-tA
+Content-Type: application/json
+
+{
+  "inviteCode": PTR-QYP
+}
+
+### Create Location
+
+POST http://localhost:3000/api/trips/6a5777b8dd96e4cd7fe4ca40/locations
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzA1OSwiZXhwIjoxNzg0NzIxODU5fQ.LkHRTsUsd8SRe2iP6Jx9rLr7bY4lP8S8oV8wFtduZjI
+Content-Type: application/json
+
+{
+  "title": "Tokyo Tower",
+  "placeName": "Tokyo Tower",
+  "address": "Tokyo",
+  "lat": 35.6586,
+  "lng": 139.7454,
+  "googlePlaceId": "test-place",
+  "coverImage": "",
+  "visitedAt": "2026-10-03"
+}
+
+##_id": 6a5779d0e1cbe2abe6fe1144
+
+### Get Locations
+
+GET http://localhost:3000/api/trips/6a5777b8dd96e4cd7fe4ca40/locations
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzA1OSwiZXhwIjoxNzg0NzIxODU5fQ.LkHRTsUsd8SRe2iP6Jx9rLr7bY4lP8S8oV8wFtduZjI
+
+### Get Location
+
+GET http://localhost:3000/api/locations/6a5779d0e1cbe2abe6fe1144
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
+
+##token": eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
+
+### Update Location
+
+PUT http://localhost:3000/api/locations/6a5779d0e1cbe2abe6fe1144
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
+Content-Type: application/json
+
+{
+  "title": "Tokyo Tower Updated"
+}
+
+### Create Memory
+
+POST http://localhost:3000/api/locations/6a5779d0e1cbe2abe6fe1144/memories
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
+Content-Type: application/json
+
+{
+  "content": "Amazing place!"
+}
+
+##_id: 6a577a09e1cbe2abe6fe1145
+
+### Get Memories
+
+GET http://localhost:3000/api/locations/6a5779d0e1cbe2abe6fe1144/memories
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
+
+### Get Memory
+
+GET http://localhost:3000/api/memories/6a577a09e1cbe2abe6fe1145
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
+
+### Update Memory
+
+PUT http://localhost:3000/api/memories/6a577a09e1cbe2abe6fe1145
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
+Content-Type: application/json
+
+{
+  "content": "Updated memory"
+}
+
+### Delete Memory
+
+DELETE http://localhost:3000/api/memories/6a577a09e1cbe2abe6fe1145
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
+
+### Delete Location
+
+DELETE http://localhost:3000/api/locations/6a5779d0e1cbe2abe6fe1144
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
+
+### Delete Trip
+
+DELETE http://localhost:3000/api/trips/6a578098e1cbe2abe6fe1149
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExOTQxMywiZXhwIjoxNzg0NzI0MjEzfQ.ckEDEQcPXUzxysDYIhD-7wnTk2fFUSwUgFNZWpfQQeg
+
+
+### Create Trip For Delete Test
+
+POST http://localhost:3000/api/trips
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExOTQxMywiZXhwIjoxNzg0NzI0MjEzfQ.ckEDEQcPXUzxysDYIhD-7wnTk2fFUSwUgFNZWpfQQeg
+Content-Type: application/json
+
+{
+  "title": "Delete Test Trip",
+  "description": "This trip will be deleted",
+  "destination": "Test Destination",
+  "startDate": "2026-10-01",
+  "endDate": "2026-10-05",
+  "coverImage": ""
+}
+
+### Get Trips
+
+GET http://localhost:3000/api/trips
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExOTQxMywiZXhwIjoxNzg0NzI0MjEzfQ.ckEDEQcPXUzxysDYIhD-7wnTk2fFUSwUgFNZWpfQQeg
+
+### Invalid Route
+
+GET http://localhost:3000/api/not-existing
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExOTQxMywiZXhwIjoxNzg0NzI0MjEzfQ.ckEDEQcPXUzxysDYIhD-7wnTk2fFUSwUgFNZWpfQQeg
