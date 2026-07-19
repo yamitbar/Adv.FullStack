@@ -1,4 +1,5 @@
 const Trip = require("../models/Trip");
+const { deleteLocationsForTrip } = require("../utils/cascadeDelete");
 
 const hasInvalidDateRange = (startDate, endDate) => {
   return Boolean(
@@ -144,10 +145,11 @@ const updateTrip = async (req, res) => {
   }
 };
 
-// Delete a trip by ID
-const deleteTrip = async (req, res) => {
+// Delete a trip by ID, along with every location, memory and locally
+// uploaded file that belongs to it.
+const deleteTrip = async (req, res, next) => {
   try {
-    const trip = await Trip.findOneAndDelete({
+    const trip = await Trip.findOne({
       _id: req.params.id,
       createdBy: req.user._id,
     });
@@ -159,12 +161,12 @@ const deleteTrip = async (req, res) => {
       });
     }
 
+    await deleteLocationsForTrip(trip._id);
+    await trip.deleteOne();
+
     res.status(204).send();
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    next(error);
   }
 };
 

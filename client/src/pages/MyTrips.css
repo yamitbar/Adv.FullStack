@@ -27,6 +27,36 @@
   line-height: 1.7;
 }
 
+.trips-success-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 1.75rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid rgba(43, 112, 86, 0.25);
+  border-radius: 1rem;
+  background: #eaf5ef;
+  color: #1c4c3a;
+  font-weight: 700;
+}
+
+.trips-success-banner span {
+  flex: 1;
+}
+
+.trips-success-banner button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  color: inherit;
+  background: rgba(43, 112, 86, 0.12);
+  cursor: pointer;
+}
+
 .trips-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

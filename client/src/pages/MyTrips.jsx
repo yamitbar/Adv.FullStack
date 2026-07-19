@@ -1,15 +1,24 @@
-import { useEffect } from "react";
 import {
+  useEffect,
+  useState,
+} from "react";
+import {
+  Check,
   CircleAlert,
   Map,
   Plus,
   RefreshCw,
+  X,
 } from "lucide-react";
 import {
   useDispatch,
   useSelector,
 } from "react-redux";
-import { Link } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
 import TripCard from "../components/trips/TripCard";
 import {
@@ -21,6 +30,13 @@ import "./MyTrips.css";
 
 function MyTrips() {
   const dispatch = useDispatch();
+  const routerLocation = useLocation();
+  const navigate = useNavigate();
+
+  const [successMessage, setSuccessMessage] =
+    useState(
+      routerLocation.state?.message || ""
+    );
 
   const {
     items: trips,
@@ -31,6 +47,19 @@ function MyTrips() {
   useEffect(() => {
     dispatch(fetchTrips());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (routerLocation.state?.message) {
+      // Clear the router state so refreshing or navigating back does
+      // not bring the banner back.
+      navigate(routerLocation.pathname, {
+        replace: true,
+        state: {},
+      });
+    }
+    // Only run once, when the page is entered with a message.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRetry = () => {
     dispatch(clearTripsError());
@@ -62,6 +91,26 @@ function MyTrips() {
           Create a trip
         </Link>
       </section>
+
+      {successMessage && (
+        <div
+          className="trips-success-banner"
+          role="status"
+        >
+          <Check size={18} />
+          <span>{successMessage}</span>
+
+          <button
+            type="button"
+            aria-label="Dismiss message"
+            onClick={() =>
+              setSuccessMessage("")
+            }
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {loading && (
         <section className="trips-state">

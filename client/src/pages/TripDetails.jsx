@@ -34,6 +34,7 @@ import {
 import LocationCard from "../components/trips/LocationCard";
 import { resolveMediaUrl } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { isSameEntity } from "../utils/normalizeId";
 
 import {
   clearTripDetails,
@@ -148,10 +149,9 @@ function TripDetails() {
     }
   };
 
-  const isCreator = Boolean(
-    user?._id &&
-      trip?.createdBy &&
-      String(trip.createdBy) === String(user._id)
+  const isCreator = isSameEntity(
+    trip?.createdBy,
+    user?._id
   );
 
   const handleStartEdit = () => {
@@ -213,22 +213,28 @@ function TripDetails() {
       return;
     }
 
+    // Joi.date() rejects an empty string, so blank optional date fields
+    // must be left out of the request entirely rather than sent as "".
+    // This means clearing a previously-set date isn't supported yet -
+    // only setting/changing it while non-empty.
+    const tripData = {
+      title: editForm.title.trim(),
+      destination: editForm.destination.trim(),
+      description: editForm.description.trim(),
+      coverImage: editForm.coverImage.trim(),
+    };
+
+    if (editForm.startDate) {
+      tripData.startDate = editForm.startDate;
+    }
+
+    if (editForm.endDate) {
+      tripData.endDate = editForm.endDate;
+    }
+
     try {
       await dispatch(
-        updateTrip({
-          tripId,
-          tripData: {
-            title: editForm.title.trim(),
-            destination:
-              editForm.destination.trim(),
-            description:
-              editForm.description.trim(),
-            startDate: editForm.startDate,
-            endDate: editForm.endDate,
-            coverImage:
-              editForm.coverImage.trim(),
-          },
-        })
+        updateTrip({ tripId, tripData })
       ).unwrap();
 
       setIsEditing(false);

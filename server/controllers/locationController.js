@@ -1,5 +1,6 @@
 const Trip = require("../models/Trip");
 const Location = require("../models/Location");
+const { deleteMemoriesForLocation } = require("../utils/cascadeDelete");
 
 // Check whether the logged-in user belongs to the trip
 const isTripMember = (trip, userId) => {
@@ -173,8 +174,9 @@ const updateLocation = async (req, res) => {
   }
 };
 
-// Delete a location
-const deleteLocation = async (req, res) => {
+// Delete a location, along with every memory and locally uploaded file
+// that belongs to it.
+const deleteLocation = async (req, res, next) => {
   try {
     const location = await Location.findById(req.params.id);
 
@@ -196,6 +198,7 @@ const deleteLocation = async (req, res) => {
       });
     }
 
+    await deleteMemoriesForLocation(location._id);
     await location.deleteOne();
 
     res.status(200).json({
@@ -203,10 +206,7 @@ const deleteLocation = async (req, res) => {
       message: "Location deleted successfully",
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    next(error);
   }
 };
 

@@ -1,6 +1,7 @@
 const Location = require("../models/Location");
 const Trip = require("../models/Trip");
 const Memory = require("../models/Memory");
+const { deleteLocalUploadedFiles } = require("../utils/mediaCleanup");
 
 // Check whether the logged-in user belongs to the trip
 const isTripMember = (trip, userId) => {
@@ -201,8 +202,8 @@ const updateMemory = async (req, res) => {
   }
 };
 
-// Delete memory
-const deleteMemory = async (req, res) => {
+// Delete memory, along with any locally uploaded files it references
+const deleteMemory = async (req, res, next) => {
   try {
     const memory = await Memory.findById(req.params.id);
 
@@ -224,6 +225,7 @@ const deleteMemory = async (req, res) => {
       });
     }
 
+    await deleteLocalUploadedFiles(memory.images);
     await memory.deleteOne();
 
     res.status(200).json({
@@ -231,10 +233,7 @@ const deleteMemory = async (req, res) => {
       message: "Memory deleted successfully",
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    next(error);
   }
 };
 
