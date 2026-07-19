@@ -13,8 +13,8 @@ const connectDB = async () => {
     // Log the error message if the connection fails
     console.error(`MongoDB connection error: ${error.message}`);
 
-    // Stop the server if the database connection cannot be established
-    process.exit(1);
+    // Let the server entry point decide how to stop startup
+    throw error;
   }
 };
 

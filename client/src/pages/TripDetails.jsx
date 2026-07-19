@@ -28,6 +28,7 @@ import {
 } from "react-router-dom";
 
 import LocationCard from "../components/trips/LocationCard";
+import { resolveMediaUrl } from "../services/api";
 
 import {
   clearTripDetails,
@@ -47,18 +48,6 @@ function formatDate(dateValue) {
     month: "long",
     year: "numeric",
   }).format(new Date(dateValue));
-}
-
-function getCoverImage(coverImage) {
-  if (!coverImage) {
-    return null;
-  }
-
-  if (coverImage.startsWith("http")) {
-    return coverImage;
-  }
-
-  return `http://localhost:3000${coverImage}`;
 }
 
 function TripDetails() {
@@ -164,7 +153,7 @@ function TripDetails() {
     );
   }
 
-  const imageUrl = getCoverImage(
+  const imageUrl = resolveMediaUrl(
     trip.coverImage
   );
 

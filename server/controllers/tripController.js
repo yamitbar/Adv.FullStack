@@ -1,5 +1,13 @@
 const Trip = require("../models/Trip");
 
+const hasInvalidDateRange = (startDate, endDate) => {
+  return Boolean(
+    startDate &&
+    endDate &&
+    new Date(endDate) < new Date(startDate)
+  );
+};
+
 // Create a new trip
 const createTrip = async (req, res) => {
   try {
@@ -92,17 +100,10 @@ const getTripById = async (req, res) => {
 // Update a trip by ID
 const updateTrip = async (req, res) => {
   try {
-    const trip = await Trip.findOneAndUpdate(
-      {
-        _id: req.params.id,
-        createdBy: req.user._id,
-      },
-      req.body,
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
+    const trip = await Trip.findOne({
+      _id: req.params.id,
+      createdBy: req.user._id,
+    });
 
     if (!trip) {
       return res.status(404).json({
@@ -110,6 +111,26 @@ const updateTrip = async (req, res) => {
         message: "Trip not found or you are not allowed to update it",
       });
     }
+
+    const nextStartDate =
+      req.body.startDate !== undefined
+        ? req.body.startDate
+        : trip.startDate;
+
+    const nextEndDate =
+      req.body.endDate !== undefined
+        ? req.body.endDate
+        : trip.endDate;
+
+    if (hasInvalidDateRange(nextStartDate, nextEndDate)) {
+      return res.status(400).json({
+        success: false,
+        message: "End date must be on or after start date",
+      });
+    }
+
+    Object.assign(trip, req.body);
+    await trip.save();
 
     res.status(200).json({
       success: true,

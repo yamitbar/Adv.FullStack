@@ -1,7 +1,11 @@
 const express = require("express");
 const validate = require("../middleware/validate");
 
-const { createTripSchema } = require("../validation/tripValidation");
+const {
+  createTripSchema,
+  updateTripSchema,
+  joinTripSchema,
+} = require("../validation/tripValidation");
 
 // Import trip controller functions
 const {
@@ -29,13 +33,13 @@ router.get("/", protect, getTrips);
 router.get("/:id", protect, getTripById);
 
 // Update a trip by ID
-router.put("/:id", protect, updateTrip);
+router.put("/:id", protect, validate(updateTripSchema), updateTrip);
 
 // Delete a trip by ID
 router.delete("/:id", protect, deleteTrip);
 
 // Join a trip using an invite code
-router.post("/join", protect, joinTrip);
+router.post("/join", protect, validate(joinTripSchema), joinTrip);
 
 // Export the router so it can be used in app.js
 module.exports = router;

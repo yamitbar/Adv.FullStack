@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
+import { resolveMediaUrl } from "../../services/api";
 
 function formatDate(dateValue) {
   if (!dateValue) {
@@ -19,20 +20,8 @@ function formatDate(dateValue) {
   }).format(new Date(dateValue));
 }
 
-function getImageUrl(imagePath) {
-  if (!imagePath) {
-    return null;
-  }
-
-  if (imagePath.startsWith("http")) {
-    return imagePath;
-  }
-
-  return `http://localhost:3000${imagePath}`;
-}
-
 function LocationCard({ location }) {
-  const imageUrl = getImageUrl(
+  const imageUrl = resolveMediaUrl(
     location.coverImage
   );
 

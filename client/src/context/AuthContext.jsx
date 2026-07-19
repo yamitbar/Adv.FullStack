@@ -103,7 +103,9 @@ export const AuthProvider = ({ children }) => {
 
       setError(message);
       throw loginError;
-}
+    } finally {
+      setLoading(false);
+    }
   };
 
   const register = async (userData) => {

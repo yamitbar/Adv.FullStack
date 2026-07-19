@@ -26,6 +26,13 @@ const protect = async (req, res, next) => {
     // Find the logged-in user and attach it to the request object
     req.user = await User.findById(decoded.id).select("-password");
 
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized, user no longer exists",
+      });
+    }
+
     // Continue to the next middleware or controller
     next();
   } 

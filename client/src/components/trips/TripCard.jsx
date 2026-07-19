@@ -5,6 +5,7 @@ import {
   Users,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { resolveMediaUrl } from "../../services/api";
 
 function formatDate(dateValue) {
   if (!dateValue) {
@@ -18,20 +19,8 @@ function formatDate(dateValue) {
   }).format(new Date(dateValue));
 }
 
-function getCoverImage(coverImage) {
-  if (!coverImage) {
-    return null;
-  }
-
-  if (coverImage.startsWith("http")) {
-    return coverImage;
-  }
-
-  return `http://localhost:3000${coverImage}`;
-}
-
 function TripCard({ trip }) {
-  const imageUrl = getCoverImage(trip.coverImage);
+  const imageUrl = resolveMediaUrl(trip.coverImage);
 
   return (
     <article className="trip-card">

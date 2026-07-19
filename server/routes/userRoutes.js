@@ -19,15 +19,15 @@ router.get("/", protect, getUsers);
 
 // GET /:id
 // Return a single user by MongoDB id
-router.get("/:id", getUserById);
+router.get("/:id", protect, getUserById);
 
 // PUT /:id
 // Update a single user by MongoDB id
-router.put("/:id", updateUser);
+router.put("/:id", protect, updateUser);
 
 // DELETE /:id
 // Delete a single user by MongoDB id
-router.delete("/:id", deleteUser);
+router.delete("/:id", protect, deleteUser);
 
 // Export the router
 module.exports = router;
