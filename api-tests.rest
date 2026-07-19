@@ -1,85 +1,66 @@
-############ users TESTS ############
-###
-POST http://localhost:3000/api/auth/register
+### Pathly API - REST Client scratch file
+### Replace the variables below with real values captured while testing
+### locally. Never commit real tokens, ids, or personal file paths here -
+### this file is tracked by git.
+
+@baseUrl = http://localhost:3000/api
+@token = REPLACE_WITH_A_LOGIN_TOKEN
+@otherToken = REPLACE_WITH_A_SECOND_USER_LOGIN_TOKEN
+@tripId = REPLACE_WITH_TRIP_ID
+@locationId = REPLACE_WITH_LOCATION_ID
+@memoryId = REPLACE_WITH_MEMORY_ID
+@inviteCode = REPLACE_WITH_INVITE_CODE
+@userId = REPLACE_WITH_USER_ID
+
+############ AUTH ############
+
+### Register
+POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "name": "yarden",
-  "email": "yarden@example.com",
-  "password": "123456"
+  "name": "Test User",
+  "email": "testuser@example.com",
+  "password": "REPLACE_WITH_A_TEST_PASSWORD"
 }
 
-###
-POST http://localhost:3000/api/auth/login
+### Login
+POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "yarden@example.com",
-  "password": "123456"
+  "email": "testuser@example.com",
+  "password": "REPLACE_WITH_A_TEST_PASSWORD"
 }
 
-###
-POST http://localhost:3000/api/auth/register
+### Login wrong password
+POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "name": "nadav",
-  "email": "nadav@example.com",
-  "password": "555555"
+  "email": "testuser@example.com",
+  "password": "wrongpassword"
 }
 
-###
-POST http://localhost:3000/api/auth/login
+### Get current user
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+############ USERS ############
+
+### Get all users (admin only)
+GET {{baseUrl}}/users
+Authorization: Bearer {{token}}
+
+### Get trips without a token (expect 401)
+GET {{baseUrl}}/trips
+
+############ TRIPS ############
+
+### Create trip
+POST {{baseUrl}}/trips
+Authorization: Bearer {{token}}
 Content-Type: application/json
-
-{
-  "email": "nadav@example.com",
-  "password": "555555"
-}
-
-###
-POST http://localhost:3000/api/auth/register
-Content-Type: application/json
-
-{
-  "name": "amir",
-  "email": "amir@example.com",
-  "password": "555555"
-}
-
-###
-POST http://localhost:3000/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "amir@example.com",
-  "password": "555555"
-}
-
-###
-POST http://localhost:3000/api/auth/register
-Content-Type: application/json
-
-{
-  "name": "ella",
-  "email": "ella@example.com",
-  "password": "666666"
-}
-
-###
-POST http://localhost:3000/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "ella@example.com",
-  "password": "666666"
-}
-
-############ YOUR TESTS ############
-### Create Trip
-POST http://localhost:3000/api/trips
-Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4NDA1NDc1NiwiZXhwIjoxNzg0NjU5NTU2fQ.fhzUXRvDhULFxjh8wn5TvkY9NSfBwSqmc0WyEj1wI8s
 
 {
   "title": "USA Family Trip",
@@ -90,266 +71,125 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkM
   "coverImage": ""
 }
 
-### Create Location
-POST http://localhost:3000/api/trips/6a5683fb768f819789ba2002/locations
+### Get trips
+GET {{baseUrl}}/trips
+Authorization: Bearer {{token}}
+
+### Get trip by id
+GET {{baseUrl}}/trips/{{tripId}}
+Authorization: Bearer {{token}}
+
+### Update trip
+PUT {{baseUrl}}/trips/{{tripId}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4NDA1NjA0MywiZXhwIjoxNzg0NjYwODQzfQ.DsjMs-hBJiUayBuSNEh2FLsyl-uaSt1GDw-wQQ8_78M
+
+{
+  "title": "Updated Trip Title"
+}
+
+### Join trip with invite code
+POST {{baseUrl}}/trips/join
+Authorization: Bearer {{otherToken}}
+Content-Type: application/json
+
+{
+  "inviteCode": "{{inviteCode}}"
+}
+
+### Delete trip
+DELETE {{baseUrl}}/trips/{{tripId}}
+Authorization: Bearer {{token}}
+
+############ LOCATIONS ############
+
+### Create location (no coordinates required)
+POST {{baseUrl}}/trips/{{tripId}}/locations
+Authorization: Bearer {{token}}
+Content-Type: application/json
 
 {
   "title": "Sunset View",
   "placeName": "Grand Canyon National Park",
   "address": "Arizona, USA",
-  "lat": 36.1069,
-  "lng": -112.1129,
-  "googlePlaceId": "test-google-place-id",
   "coverImage": "",
   "visitedAt": "2026-08-08"
 }
 
-### Create Memory
-POST http://localhost:3000/api/locations/6a56899fea6b8038631eb461/memories
+### Get locations for a trip
+GET {{baseUrl}}/trips/{{tripId}}/locations
+Authorization: Bearer {{token}}
+
+### Get location by id
+GET {{baseUrl}}/locations/{{locationId}}
+Authorization: Bearer {{token}}
+
+### Update location
+PUT {{baseUrl}}/locations/{{locationId}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4NDA1ODA0MCwiZXhwIjoxNzg0NjYyODQwfQ.bkkxc9szBGOMQXIeE_k_47LzrH4p_S_DMnFIPLdQ7vY
 
 {
-  "content": "An amazing day at the Grand Canyon",
-  "images": [
-    "/uploads/grand-canyon-1.jpg",
-    "/uploads/grand-canyon-2.jpg"
-  ],
-  "videos": []
+  "title": "Updated Location Title"
 }
 
-### Upload Images To Memory
-POST http://localhost:3000/api/memories/6a5690f96739a491449275a7/images
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4NDA1ODA0MCwiZXhwIjoxNzg0NjYyODQwfQ.bkkxc9szBGOMQXIeE_k_47LzrH4p_S_DMnFIPLdQ7vY
+### Delete location
+DELETE {{baseUrl}}/locations/{{locationId}}
+Authorization: Bearer {{token}}
+
+############ MEMORIES ############
+
+### Create text memory
+POST {{baseUrl}}/locations/{{locationId}}/memories
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "content": "An amazing day at the Grand Canyon"
+}
+
+### Get memories for a location
+GET {{baseUrl}}/locations/{{locationId}}/memories
+Authorization: Bearer {{token}}
+
+### Get memory by id
+GET {{baseUrl}}/memories/{{memoryId}}
+Authorization: Bearer {{token}}
+
+### Update memory text
+PUT {{baseUrl}}/memories/{{memoryId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "content": "Updated memory text"
+}
+
+### Upload images to a memory
+### Place small sample images next to this file (or adjust the paths
+### below) before running this request.
+POST {{baseUrl}}/memories/{{memoryId}}/images
+Authorization: Bearer {{token}}
 Content-Type: multipart/form-data; boundary=PathlyBoundary
 
 --PathlyBoundary
-Content-Disposition: form-data; name="images"; filename="photo1.jpg"
+Content-Disposition: form-data; name="images"; filename="sample-1.jpg"
 Content-Type: image/jpeg
 
-< "C:\Users\barka\Pictures\Screenshots\צילום מסך 2026-07-14 084428.png"
+< ./sample-1.jpg
 --PathlyBoundary
-Content-Disposition: form-data; name="images"; filename="photo2.jpg"
+Content-Disposition: form-data; name="images"; filename="sample-2.jpg"
 Content-Type: image/jpeg
 
-< "C:\Users\barka\Pictures\Screenshots\צילום מסך 2026-07-14 084458.png"
+< ./sample-2.jpg
 --PathlyBoundary--
 
-### Upload One Image To Memory
-POST http://localhost:3000/api/memories/6a5690f96739a491449275a7/images
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4NDA1ODA0MCwiZXhwIjoxNzg0NjYyODQwfQ.bkkxc9szBGOMQXIeE_k_47LzrH4p_S_DMnFIPLdQ7vY
-Content-Type: multipart/form-data; boundary=PathlyBoundary
-
---PathlyBoundary
-Content-Disposition: form-data; name="images"; filename="test-image.jpg"
-Content-Type: image/jpeg
-
-< ./test-image.jpg
---PathlyBoundary--
-
-
-######## Additional Tests ################################
-
-### Register
-
-POST http://localhost:3000/api/auth/register
-Content-Type: application/json
-
-{
-  "name": "Backend Test User",
-  "email": "backendtest@example.com",
-  "password": "123456"
-}
-
-### Login
-
-POST http://localhost:3000/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "backendtest@example.com",
-  "password": "123456"
-}
-
-##token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzA1OSwiZXhwIjoxNzg0NzIxODU5fQ.LkHRTsUsd8SRe2iP6Jx9rLr7bY4lP8S8oV8wFtduZjI
-
-### Login Wrong Password
-
-POST http://localhost:3000/api/auth/login
-Content-Type: application/json
-
-{
-  "email": "backendtest@example.com",
-  "password": "wrongpassword"
-}
-
-
-### Get Trips Without Token
-
-GET http://localhost:3000/api/trips
-
-### Create Trip
-
-POST http://localhost:3000/api/trips
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzA1OSwiZXhwIjoxNzg0NzIxODU5fQ.LkHRTsUsd8SRe2iP6Jx9rLr7bY4lP8S8oV8wFtduZjI
-Content-Type: application/json
-
-{
-  "title": "NEW YORK TRIP",
-  "description": "Testing backend",
-  "destination": "Japan",
-  "startDate": "2026-10-01",
-  "endDate": "2026-10-15",
-  "coverImage": ""
-}
-
-##"_id: 6a5777b8dd96e4cd7fe4ca40
-##inviteCode: PTR-QYP
-
-### Get Trips
-
-GET http://localhost:3000/api/trips
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzA1OSwiZXhwIjoxNzg0NzIxODU5fQ.LkHRTsUsd8SRe2iP6Jx9rLr7bY4lP8S8oV8wFtduZjI
-
-
-### Get Trip By ID
-
-GET http://localhost:3000/api/trips/6a5777b8dd96e4cd7fe4ca40
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzA1OSwiZXhwIjoxNzg0NzIxODU5fQ.LkHRTsUsd8SRe2iP6Jx9rLr7bY4lP8S8oV8wFtduZjI
-
-
-### Update Trip
-
-PUT http://localhost:3000/api/trips/6a5777b8dd96e4cd7fe4ca40
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzA1OSwiZXhwIjoxNzg0NzIxODU5fQ.LkHRTsUsd8SRe2iP6Jx9rLr7bY4lP8S8oV8wFtduZjI
-Content-Type: application/json
-
-{
-  "title": "Updated Backend Trip"
-}
-
-### Join Trip
-
-POST http://localhost:3000/api/trips/join
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDEzZjVkMTM5ZGU2MmI2Yzg1MDcyNiIsImlhdCI6MTc4NDExNzMzOSwiZXhwIjoxNzg0NzIyMTM5fQ.G8aqGtZNetOvKtIP9rygMxckbJ10Jojmf3sBaktf-tA
-Content-Type: application/json
-
-{
-  "inviteCode": PTR-QYP
-}
-
-### Create Location
-
-POST http://localhost:3000/api/trips/6a5777b8dd96e4cd7fe4ca40/locations
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzA1OSwiZXhwIjoxNzg0NzIxODU5fQ.LkHRTsUsd8SRe2iP6Jx9rLr7bY4lP8S8oV8wFtduZjI
-Content-Type: application/json
-
-{
-  "title": "Tokyo Tower",
-  "placeName": "Tokyo Tower",
-  "address": "Tokyo",
-  "lat": 35.6586,
-  "lng": 139.7454,
-  "googlePlaceId": "test-place",
-  "coverImage": "",
-  "visitedAt": "2026-10-03"
-}
-
-##_id": 6a5779d0e1cbe2abe6fe1144
-
-### Get Locations
-
-GET http://localhost:3000/api/trips/6a5777b8dd96e4cd7fe4ca40/locations
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzA1OSwiZXhwIjoxNzg0NzIxODU5fQ.LkHRTsUsd8SRe2iP6Jx9rLr7bY4lP8S8oV8wFtduZjI
-
-### Get Location
-
-GET http://localhost:3000/api/locations/6a5779d0e1cbe2abe6fe1144
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
-
-##token": eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
-
-### Update Location
-
-PUT http://localhost:3000/api/locations/6a5779d0e1cbe2abe6fe1144
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
-Content-Type: application/json
-
-{
-  "title": "Tokyo Tower Updated"
-}
-
-### Create Memory
-
-POST http://localhost:3000/api/locations/6a5779d0e1cbe2abe6fe1144/memories
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
-Content-Type: application/json
-
-{
-  "content": "Amazing place!"
-}
-
-##_id: 6a577a09e1cbe2abe6fe1145
-
-### Get Memories
-
-GET http://localhost:3000/api/locations/6a5779d0e1cbe2abe6fe1144/memories
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
-
-### Get Memory
-
-GET http://localhost:3000/api/memories/6a577a09e1cbe2abe6fe1145
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
-
-### Update Memory
-
-PUT http://localhost:3000/api/memories/6a577a09e1cbe2abe6fe1145
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
-Content-Type: application/json
-
-{
-  "content": "Updated memory"
-}
-
-### Delete Memory
-
-DELETE http://localhost:3000/api/memories/6a577a09e1cbe2abe6fe1145
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
-
-### Delete Location
-
-DELETE http://localhost:3000/api/locations/6a5779d0e1cbe2abe6fe1144
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExNzUwMSwiZXhwIjoxNzg0NzIyMzAxfQ.Tfib2TzF9d7mt7XOmTjhvbGkSRvLVTAmFBfmyRURYDk
-
-### Delete Trip
-
-DELETE http://localhost:3000/api/trips/6a578098e1cbe2abe6fe1149
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExOTQxMywiZXhwIjoxNzg0NzI0MjEzfQ.ckEDEQcPXUzxysDYIhD-7wnTk2fFUSwUgFNZWpfQQeg
-
-
-### Create Trip For Delete Test
-
-POST http://localhost:3000/api/trips
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExOTQxMywiZXhwIjoxNzg0NzI0MjEzfQ.ckEDEQcPXUzxysDYIhD-7wnTk2fFUSwUgFNZWpfQQeg
-Content-Type: application/json
-
-{
-  "title": "Delete Test Trip",
-  "description": "This trip will be deleted",
-  "destination": "Test Destination",
-  "startDate": "2026-10-01",
-  "endDate": "2026-10-05",
-  "coverImage": ""
-}
-
-### Get Trips
-
-GET http://localhost:3000/api/trips
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExOTQxMywiZXhwIjoxNzg0NzI0MjEzfQ.ckEDEQcPXUzxysDYIhD-7wnTk2fFUSwUgFNZWpfQQeg
-
-### Invalid Route
-
-GET http://localhost:3000/api/not-existing
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTc3NzMwZGQ5NmU0Y2Q3ZmU0Y2EzZiIsImlhdCI6MTc4NDExOTQxMywiZXhwIjoxNzg0NzI0MjEzfQ.ckEDEQcPXUzxysDYIhD-7wnTk2fFUSwUgFNZWpfQQeg
+### Delete memory
+DELETE {{baseUrl}}/memories/{{memoryId}}
+Authorization: Bearer {{token}}
+
+############ MISC ############
+
+### Invalid route (expect 404)
+GET {{baseUrl}}/not-existing
+Authorization: Bearer {{token}}
