@@ -35,6 +35,10 @@ const TripDetails = lazy(() =>
   import("./pages/TripDetails")
 );
 
+const AddLocation = lazy(() =>
+  import("./pages/AddLocation")
+);
+
 const NotFound = lazy(() =>
   import("./pages/NotFound")
 );
@@ -57,7 +61,10 @@ function App() {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<Home />} />
+          <Route
+            path="/"
+            element={<Home />}
+          />
 
           <Route
             path="/trips"
@@ -90,10 +97,7 @@ function App() {
             path="/trips/:tripId/locations/new"
             element={
               <ProtectedRoute>
-                <PlaceholderPage
-                  title="Add Location"
-                  description="The location creation form will be connected to Google Places and the Pathly API next."
-                />
+                <AddLocation />
               </ProtectedRoute>
             }
           />
@@ -104,7 +108,7 @@ function App() {
               <ProtectedRoute>
                 <PlaceholderPage
                   title="Location Memories"
-                  description="The complete location and memories experience will be built after location creation."
+                  description="The complete location and memories experience will be built next."
                 />
               </ProtectedRoute>
             }

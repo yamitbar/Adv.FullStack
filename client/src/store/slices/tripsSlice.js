@@ -8,10 +8,26 @@ import api from "../../services/api";
 const getErrorMessage = (
   error,
   fallbackMessage
-) =>
-  error.response?.data?.message ||
-  error.message ||
-  fallbackMessage;
+) => {
+  const responseData = error?.response?.data;
+
+  if (typeof responseData === "string") {
+    return responseData;
+  }
+
+  if (
+    Array.isArray(responseData?.errors) &&
+    responseData.errors.length > 0
+  ) {
+    return responseData.errors.join(", ");
+  }
+
+  return (
+    responseData?.message ||
+    error?.message ||
+    fallbackMessage
+  );
+};
 
 export const fetchTrips = createAsyncThunk(
   "trips/fetchTrips",
@@ -93,6 +109,31 @@ export const createTrip = createAsyncThunk(
   }
 );
 
+export const createLocation =
+  createAsyncThunk(
+    "trips/createLocation",
+    async (
+      { tripId, locationData },
+      thunkAPI
+    ) => {
+      try {
+        const { data } = await api.post(
+          `/trips/${tripId}/locations`,
+          locationData
+        );
+
+        return data.location;
+      } catch (error) {
+        return thunkAPI.rejectWithValue(
+          getErrorMessage(
+            error,
+            "Failed to create location"
+          )
+        );
+      }
+    }
+  );
+
 const tripsSlice = createSlice({
   name: "trips",
 
@@ -106,11 +147,13 @@ const tripsSlice = createSlice({
     creating: false,
     detailsLoading: false,
     locationsLoading: false,
+    creatingLocation: false,
 
     error: null,
     createError: null,
     detailsError: null,
     locationsError: null,
+    createLocationError: null,
   },
 
   reducers: {
@@ -122,11 +165,16 @@ const tripsSlice = createSlice({
       state.createError = null;
     },
 
+    clearCreateLocationError: (state) => {
+      state.createLocationError = null;
+    },
+
     clearTripDetails: (state) => {
       state.selectedTrip = null;
       state.selectedTripLocations = [];
       state.detailsError = null;
       state.locationsError = null;
+      state.createLocationError = null;
     },
   },
 
@@ -221,6 +269,33 @@ const tripsSlice = createSlice({
           state.creating = false;
           state.createError = action.payload;
         }
+      )
+
+      .addCase(
+        createLocation.pending,
+        (state) => {
+          state.creatingLocation = true;
+          state.createLocationError = null;
+        }
+      )
+
+      .addCase(
+        createLocation.fulfilled,
+        (state, action) => {
+          state.creatingLocation = false;
+          state.selectedTripLocations.unshift(
+            action.payload
+          );
+        }
+      )
+
+      .addCase(
+        createLocation.rejected,
+        (state, action) => {
+          state.creatingLocation = false;
+          state.createLocationError =
+            action.payload;
+        }
       );
   },
 });
@@ -228,6 +303,7 @@ const tripsSlice = createSlice({
 export const {
   clearTripsError,
   clearCreateTripError,
+  clearCreateLocationError,
   clearTripDetails,
 } = tripsSlice.actions;
 
