@@ -38,6 +38,20 @@ const errorHandler = (err, req, res, next) => {
     message = "Authentication token has expired";
   }
 
+  // Handle Multer upload errors with a friendly, specific message
+  if (err.name === "MulterError") {
+    statusCode = 400;
+
+    const multerMessages = {
+      LIMIT_FILE_SIZE: "Each image must be 5MB or smaller",
+      LIMIT_FILE_COUNT: "You can upload up to 5 images at a time",
+      LIMIT_UNEXPECTED_FILE:
+        "Too many images, or an unexpected upload field",
+    };
+
+    message = multerMessages[err.code] || "Image upload failed";
+  }
+
   // Log the complete error on the server
   console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   console.error(err.stack || err);

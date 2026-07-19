@@ -73,9 +73,31 @@ const deleteLocalUploadedFiles = async (storedPaths = []) => {
   );
 };
 
+// Removes files Multer just wrote for the current request, using the
+// absolute paths Multer itself reports on req.files. Used to roll back
+// an upload when the database operation right after it fails, so a
+// failed request never leaves orphan files behind. Never throws.
+const deleteFilesByAbsolutePath = async (absolutePaths = []) => {
+  await Promise.all(
+    (absolutePaths || []).map(async (filePath) => {
+      try {
+        await fs.promises.unlink(filePath);
+      } catch (error) {
+        if (error.code !== "ENOENT") {
+          console.error(
+            `Failed to remove orphaned upload ${filePath}:`,
+            error.message
+          );
+        }
+      }
+    })
+  );
+};
+
 module.exports = {
   UPLOADS_DIR,
   ensureUploadsDir,
   resolveUploadFilePath,
   deleteLocalUploadedFiles,
+  deleteFilesByAbsolutePath,
 };

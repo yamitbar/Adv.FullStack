@@ -3,6 +3,9 @@ const express = require("express");
 const { protect } = require("../middleware/authMiddleware");
 const validate = require("../middleware/validate");
 const { uploadImages } = require("../middleware/upload");
+const {
+  authorizeMemoryImageUpload,
+} = require("../middleware/memoryAuth");
 
 const {
   createMemorySchema,
@@ -37,10 +40,12 @@ locationMemoryRouter
     getMemoriesByLocation
   );
 
-// Upload images to an existing memory
+// Upload images to an existing memory. Authorization runs BEFORE Multer
+// so an unauthorized/not-found request never writes files to disk.
 memoryRouter.post(
   "/:id/images",
   protect,
+  authorizeMemoryImageUpload,
   uploadImages.array("images", 5),
   uploadMemoryImages
 );

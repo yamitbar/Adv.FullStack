@@ -1,10 +1,18 @@
 const multer = require("multer");
-const path = require("path");
+const {
+  UPLOADS_DIR,
+  ensureUploadsDir,
+} = require("../utils/mediaCleanup");
+
+// Multer does not create its destination directory, and "uploads/" is
+// gitignored so it will not exist on a clean clone or a fresh deploy.
+// Create it once when this module is first loaded.
+ensureUploadsDir();
 
 // Configure where uploaded files are stored
 const storage = multer.diskStorage({
   destination: (req, file, callback) => {
-    callback(null, path.join(__dirname, "../uploads"));
+    callback(null, UPLOADS_DIR);
   },
 
   filename: (req, file, callback) => {
@@ -31,10 +39,13 @@ const imageFileFilter = (req, file, callback) => {
     return callback(null, true);
   }
 
-  callback(
-    new Error("Only JPEG, PNG and WebP images are allowed"),
-    false
+  const error = new Error(
+    "Only JPEG, PNG and WebP images are allowed"
   );
+
+  error.statusCode = 400;
+
+  callback(error, false);
 };
 
 // Create the Multer middleware
