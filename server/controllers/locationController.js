@@ -1,19 +1,7 @@
 const Trip = require("../models/Trip");
 const Location = require("../models/Location");
 const { deleteMemoriesForLocation } = require("../utils/cascadeDelete");
-
-// Check whether the logged-in user belongs to the trip
-const isTripMember = (trip, userId) => {
-  const isCreator =
-    trip.createdBy.toString() === userId.toString();
-
-  const isParticipant = trip.participants.some(
-    (participantId) =>
-      participantId.toString() === userId.toString()
-  );
-
-  return isCreator || isParticipant;
-};
+const { isTripMember } = require("../utils/tripMembership");
 
 // Create a new location inside a trip
 const createLocation = async (req, res) => {

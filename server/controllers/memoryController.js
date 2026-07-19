@@ -5,19 +5,7 @@ const {
   deleteLocalUploadedFiles,
   deleteFilesByAbsolutePath,
 } = require("../utils/mediaCleanup");
-
-// Check whether the logged-in user belongs to the trip
-const isTripMember = (trip, userId) => {
-  const isCreator =
-    trip.createdBy.toString() === userId.toString();
-
-  const isParticipant = trip.participants.some(
-    (participantId) =>
-      participantId.toString() === userId.toString()
-  );
-
-  return isCreator || isParticipant;
-};
+const { isTripMember } = require("../utils/tripMembership");
 
 // Create a memory
 const createMemory = async (req, res, next) => {
