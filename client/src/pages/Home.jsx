@@ -141,14 +141,6 @@ function Home() {
                 <Plus size={19} />
                 Start a journey
               </Link>
-
-              <Link
-                to="/map"
-                className="button button-glass button-large"
-              >
-                <MapPin size={19} />
-                Explore the map
-              </Link>
             </div>
           </div>
 
@@ -309,63 +301,6 @@ function Home() {
           </div>
         </section>
       )}
-
-      <section className="section map-showcase-section">
-        <div className="shell map-showcase">
-          <div className="map-showcase-copy">
-            <span className="section-kicker">
-              Map every memory
-            </span>
-
-            <h2>
-              See your story unfold across the
-              world.
-            </h2>
-
-            <p>
-              Every location becomes part of a
-              visual journey. Open a pin to revisit
-              the photos, stories and people
-              connected to that place.
-            </p>
-
-            <Link
-              to="/map"
-              className="button button-primary"
-            >
-              Open your map
-              <ArrowRight size={18} />
-            </Link>
-          </div>
-
-          <div className="map-preview-card">
-            <div className="map-preview-background" />
-
-            <span className="map-pin map-pin-one">
-              <MapPin size={18} />
-            </span>
-
-            <span className="map-pin map-pin-two">
-              <MapPin size={18} />
-            </span>
-
-            <span className="map-pin map-pin-three">
-              <MapPin size={18} />
-            </span>
-
-            <div className="map-memory-preview map-memory-preview-badge">
-              <Compass size={20} />
-
-              <div>
-                <strong>Coming next</strong>
-                <span>
-                  Your pins will appear here
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <section className="section cta-section">
         <div className="shell cta-card">

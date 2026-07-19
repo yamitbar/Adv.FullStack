@@ -24,8 +24,7 @@ function Footer() {
 
         <div className="footer-links">
           <Link to="/trips">My trips</Link>
-          <Link to="/map">Explore map</Link>
-          <Link to="/profile">Profile</Link>
+          <Link to="/trips/new">Create a trip</Link>
         </div>
 
         <p className="footer-copyright">

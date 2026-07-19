@@ -3,19 +3,19 @@ import {
   Compass,
   LogIn,
   LogOut,
-  Map,
   Menu,
   Plus,
-  User,
   X,
 } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
+// The primary demo navigation only lists finished MVP destinations.
+// /map and /profile still exist as routes (see App.jsx) but are
+// intentionally not linked from anywhere in the main flow yet.
 const navigationItems = [
   { label: "Home", path: "/" },
   { label: "My Trips", path: "/trips" },
-  { label: "Map", path: "/map" },
 ];
 
 function Navbar() {
@@ -106,15 +106,6 @@ function Navbar() {
                       </span>
                     </div>
 
-                    <Link
-                      to="/profile"
-                      className="dropdown-link"
-                      onClick={closeMenus}
-                    >
-                      <User size={17} />
-                      Profile
-                    </Link>
-
                     <button
                       type="button"
                       className="dropdown-link dropdown-button"
@@ -172,9 +163,6 @@ function Navbar() {
               }
               onClick={closeMenus}
             >
-              {item.label === "Map" && (
-                <Map size={17} />
-              )}
               {item.label}
             </NavLink>
           ))}
