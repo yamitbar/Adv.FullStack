@@ -148,6 +148,27 @@ export const deleteTrip = createAsyncThunk(
   }
 );
 
+export const joinTrip = createAsyncThunk(
+  "trips/joinTrip",
+  async (inviteCode, thunkAPI) => {
+    try {
+      const { data } = await api.post(
+        "/trips/join",
+        { inviteCode }
+      );
+
+      return data.trip;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        getErrorMessage(
+          error,
+          "Failed to join trip"
+        )
+      );
+    }
+  }
+);
+
 export const createLocation =
   createAsyncThunk(
     "trips/createLocation",
@@ -189,6 +210,7 @@ const tripsSlice = createSlice({
     creatingLocation: false,
     updatingTrip: false,
     deletingTrip: false,
+    joiningTrip: false,
 
     error: null,
     createError: null,
@@ -197,6 +219,7 @@ const tripsSlice = createSlice({
     createLocationError: null,
     updateTripError: null,
     deleteTripError: null,
+    joinTripError: null,
   },
 
   reducers: {
@@ -218,6 +241,10 @@ const tripsSlice = createSlice({
 
     clearDeleteTripError: (state) => {
       state.deleteTripError = null;
+    },
+
+    clearJoinTripError: (state) => {
+      state.joinTripError = null;
     },
 
     clearTripDetails: (state) => {
@@ -377,6 +404,35 @@ const tripsSlice = createSlice({
         }
       )
 
+      .addCase(joinTrip.pending, (state) => {
+        state.joiningTrip = true;
+        state.joinTripError = null;
+      })
+
+      .addCase(
+        joinTrip.fulfilled,
+        (state, action) => {
+          state.joiningTrip = false;
+
+          const alreadyPresent = state.items.some(
+            (trip) =>
+              trip._id === action.payload._id
+          );
+
+          if (!alreadyPresent) {
+            state.items.unshift(action.payload);
+          }
+        }
+      )
+
+      .addCase(
+        joinTrip.rejected,
+        (state, action) => {
+          state.joiningTrip = false;
+          state.joinTripError = action.payload;
+        }
+      )
+
       .addCase(
         createLocation.pending,
         (state) => {
@@ -412,6 +468,7 @@ export const {
   clearCreateLocationError,
   clearUpdateTripError,
   clearDeleteTripError,
+  clearJoinTripError,
   clearTripDetails,
 } = tripsSlice.actions;
 

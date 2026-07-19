@@ -12,6 +12,12 @@
   margin-bottom: 2.5rem;
 }
 
+.trips-page-header-actions {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
 .trips-page-header h1 {
   margin: 0.5rem 0 0.75rem;
   color: #10261e;
@@ -216,6 +222,10 @@
 
   .trips-page-header .button {
     justify-content: center;
+  }
+
+  .trips-page-header-actions {
+    flex-direction: column;
   }
 
   .trips-grid {

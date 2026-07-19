@@ -1,0 +1,130 @@
+.join-trip-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(9, 31, 23, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+.join-trip-modal {
+  position: relative;
+  width: min(420px, 100%);
+  padding: 2rem;
+  border-radius: 1.6rem;
+  background: #ffffff;
+  box-shadow: 0 30px 80px rgba(9, 31, 23, 0.35);
+}
+
+.join-trip-close {
+  position: absolute;
+  top: 1.1rem;
+  right: 1.1rem;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  color: #4c584f;
+  background: #edf4f0;
+  cursor: pointer;
+}
+
+.join-trip-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 1rem;
+  place-items: center;
+  border-radius: 15px;
+  color: #2b7056;
+  background: #e6f0eb;
+}
+
+.join-trip-modal h2 {
+  margin: 0 0 0.4rem;
+  color: #10261e;
+  font-size: 1.5rem;
+}
+
+.join-trip-modal > p {
+  margin: 0 0 1.4rem;
+  color: #6c7872;
+  line-height: 1.6;
+}
+
+.join-trip-modal label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #18352a;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.join-trip-modal input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 1rem;
+  border: 1px solid rgba(28, 72, 55, 0.18);
+  border-radius: 1rem;
+  background: #fbfcfa;
+  color: #10261e;
+  font: inherit;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  outline: none;
+}
+
+.join-trip-modal input::placeholder {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.join-trip-modal input:focus {
+  border-color: #377d61;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(55, 125, 97, 0.12);
+}
+
+.join-trip-modal input:disabled {
+  opacity: 0.7;
+}
+
+.join-trip-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  margin-top: 1.2rem;
+}
+
+.join-trip-success {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(43, 112, 86, 0.25);
+  border-radius: 1rem;
+  background: #eaf5ef;
+  color: #1c4c3a;
+  font-weight: 700;
+}
+
+.join-trip-spin {
+  animation: join-trip-spin-animation 0.8s linear infinite;
+}
+
+@keyframes join-trip-spin-animation {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 480px) {
+  .join-trip-modal {
+    padding: 1.6rem;
+  }
+}

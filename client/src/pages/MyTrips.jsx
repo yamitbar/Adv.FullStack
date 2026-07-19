@@ -21,6 +21,7 @@ import {
 } from "react-router-dom";
 
 import TripCard from "../components/trips/TripCard";
+import JoinTripModal from "../components/trips/JoinTripModal";
 import {
   clearTripsError,
   fetchTrips,
@@ -37,6 +38,9 @@ function MyTrips() {
     useState(
       routerLocation.state?.message || ""
     );
+
+  const [isJoinModalOpen, setIsJoinModalOpen] =
+    useState(false);
 
   const {
     items: trips,
@@ -83,14 +87,34 @@ function MyTrips() {
           </p>
         </div>
 
-        <Link
-          to="/trips/new"
-          className="button button-primary"
-        >
-          <Plus size={18} />
-          Create a trip
-        </Link>
+        <div className="trips-page-header-actions">
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={() =>
+              setIsJoinModalOpen(true)
+            }
+          >
+            Join with invite code
+          </button>
+
+          <Link
+            to="/trips/new"
+            className="button button-primary"
+          >
+            <Plus size={18} />
+            Create a trip
+          </Link>
+        </div>
       </section>
+
+      {isJoinModalOpen && (
+        <JoinTripModal
+          onClose={() =>
+            setIsJoinModalOpen(false)
+          }
+        />
+      )}
 
       {successMessage && (
         <div
@@ -173,6 +197,9 @@ function MyTrips() {
               <button
                 type="button"
                 className="button button-secondary"
+                onClick={() =>
+                  setIsJoinModalOpen(true)
+                }
               >
                 Join with invite code
               </button>
