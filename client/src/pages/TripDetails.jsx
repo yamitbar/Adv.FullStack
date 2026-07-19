@@ -11,10 +11,13 @@ import {
   Copy,
   Map,
   MapPin,
+  Pencil,
   Plus,
   RefreshCw,
   Share2,
+  Trash2,
   Users,
+  X,
 } from "lucide-react";
 
 import {
@@ -24,16 +27,21 @@ import {
 
 import {
   Link,
+  useNavigate,
   useParams,
 } from "react-router-dom";
 
 import LocationCard from "../components/trips/LocationCard";
 import { resolveMediaUrl } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 import {
   clearTripDetails,
+  clearUpdateTripError,
+  deleteTrip,
   fetchTripById,
   fetchTripLocations,
+  updateTrip,
 } from "../store/slices/tripsSlice";
 
 import "./TripDetails.css";
@@ -50,12 +58,47 @@ function formatDate(dateValue) {
   }).format(new Date(dateValue));
 }
 
+const emptyEditForm = {
+  title: "",
+  destination: "",
+  description: "",
+  startDate: "",
+  endDate: "",
+  coverImage: "",
+};
+
+// Trims a stored date/time value down to the yyyy-mm-dd shape an
+// <input type="date"> expects.
+function toDateInputValue(dateValue) {
+  if (!dateValue) {
+    return "";
+  }
+
+  return new Date(dateValue)
+    .toISOString()
+    .slice(0, 10);
+}
+
 function TripDetails() {
   const { tripId } = useParams();
 
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [copied, setCopied] =
+    useState(false);
+
+  const [isEditing, setIsEditing] =
+    useState(false);
+
+  const [editForm, setEditForm] =
+    useState(emptyEditForm);
+
+  const [editLocalError, setEditLocalError] =
+    useState("");
+
+  const [isDeleting, setIsDeleting] =
     useState(false);
 
   const {
@@ -65,6 +108,10 @@ function TripDetails() {
     locationsLoading,
     detailsError,
     locationsError,
+    updatingTrip,
+    updateTripError,
+    deletingTrip,
+    deleteTripError,
   } = useSelector((state) => state.trips);
 
   useEffect(() => {
@@ -98,6 +145,123 @@ function TripDetails() {
       }, 2000);
     } catch {
       setCopied(false);
+    }
+  };
+
+  const isCreator = Boolean(
+    user?._id &&
+      trip?.createdBy &&
+      String(trip.createdBy) === String(user._id)
+  );
+
+  const handleStartEdit = () => {
+    setEditForm({
+      title: trip.title || "",
+      destination: trip.destination || "",
+      description: trip.description || "",
+      startDate: toDateInputValue(
+        trip.startDate
+      ),
+      endDate: toDateInputValue(trip.endDate),
+      coverImage: trip.coverImage || "",
+    });
+
+    setEditLocalError("");
+    dispatch(clearUpdateTripError());
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditLocalError("");
+    dispatch(clearUpdateTripError());
+  };
+
+  const handleEditChange = (event) => {
+    setEditLocalError("");
+    dispatch(clearUpdateTripError());
+
+    setEditForm((currentData) => ({
+      ...currentData,
+      [event.target.name]:
+        event.target.value,
+    }));
+  };
+
+  const handleEditSubmit = async (event) => {
+    event.preventDefault();
+
+    if (
+      !editForm.title.trim() ||
+      !editForm.destination.trim()
+    ) {
+      setEditLocalError(
+        "Title and destination are required."
+      );
+      return;
+    }
+
+    if (
+      editForm.startDate &&
+      editForm.endDate &&
+      new Date(editForm.endDate) <
+        new Date(editForm.startDate)
+    ) {
+      setEditLocalError(
+        "End date cannot be earlier than start date."
+      );
+      return;
+    }
+
+    try {
+      await dispatch(
+        updateTrip({
+          tripId,
+          tripData: {
+            title: editForm.title.trim(),
+            destination:
+              editForm.destination.trim(),
+            description:
+              editForm.description.trim(),
+            startDate: editForm.startDate,
+            endDate: editForm.endDate,
+            coverImage:
+              editForm.coverImage.trim(),
+          },
+        })
+      ).unwrap();
+
+      setIsEditing(false);
+    } catch {
+      // Redux stores and displays the error message.
+    }
+  };
+
+  const handleDeleteTrip = async () => {
+    const confirmed = window.confirm(
+      `Delete "${trip.title}"? This cannot be undone.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      await dispatch(
+        deleteTrip(tripId)
+      ).unwrap();
+
+      navigate("/trips", {
+        replace: true,
+        state: {
+          message: "Trip deleted successfully.",
+        },
+      });
+    } catch {
+      setIsDeleting(false);
+      // Redux stores and displays the error message.
     }
   };
 
@@ -214,13 +378,172 @@ function TripDetails() {
             <button
               type="button"
               className="button trip-share-button"
+              onClick={handleCopyInviteCode}
             >
-              <Share2 size={18} />
-              Share trip
+              {copied ? (
+                <Check size={18} />
+              ) : (
+                <Share2 size={18} />
+              )}
+              {copied
+                ? "Invite code copied"
+                : "Share trip"}
             </button>
+
+            {isCreator && (
+              <>
+                <button
+                  type="button"
+                  className="button trip-share-button"
+                  onClick={handleStartEdit}
+                >
+                  <Pencil size={18} />
+                  Edit trip
+                </button>
+
+                <button
+                  type="button"
+                  className="button trip-share-button trip-delete-button"
+                  onClick={handleDeleteTrip}
+                  disabled={
+                    isDeleting || deletingTrip
+                  }
+                >
+                  <Trash2 size={18} />
+                  {isDeleting || deletingTrip
+                    ? "Deleting..."
+                    : "Delete trip"}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </section>
+
+      {deleteTripError && (
+        <div className="form-error trip-details-inline-error">
+          {deleteTripError}
+        </div>
+      )}
+
+      {isEditing && (
+        <section className="trip-edit-card">
+          <div className="trip-edit-heading">
+            <h2>Edit trip</h2>
+
+            <button
+              type="button"
+              className="trip-edit-close"
+              onClick={handleCancelEdit}
+              aria-label="Cancel editing"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {(editLocalError ||
+            updateTripError) && (
+            <div className="form-error">
+              {editLocalError ||
+                updateTripError}
+            </div>
+          )}
+
+          <form
+            className="trip-edit-form"
+            onSubmit={handleEditSubmit}
+          >
+            <label>
+              Trip title
+              <input
+                type="text"
+                name="title"
+                value={editForm.title}
+                onChange={handleEditChange}
+                maxLength={100}
+                required
+              />
+            </label>
+
+            <label>
+              Destination
+              <input
+                type="text"
+                name="destination"
+                value={editForm.destination}
+                onChange={handleEditChange}
+                maxLength={100}
+                required
+              />
+            </label>
+
+            <label className="trip-edit-full">
+              Description
+              <textarea
+                name="description"
+                value={editForm.description}
+                onChange={handleEditChange}
+                rows={4}
+                maxLength={500}
+              />
+            </label>
+
+            <label>
+              Start date
+              <input
+                type="date"
+                name="startDate"
+                value={editForm.startDate}
+                onChange={handleEditChange}
+              />
+            </label>
+
+            <label>
+              End date
+              <input
+                type="date"
+                name="endDate"
+                value={editForm.endDate}
+                onChange={handleEditChange}
+                min={
+                  editForm.startDate || undefined
+                }
+              />
+            </label>
+
+            <label className="trip-edit-full">
+              Cover image URL
+              <input
+                type="url"
+                name="coverImage"
+                value={editForm.coverImage}
+                onChange={handleEditChange}
+                placeholder="https://example.com/trip-cover.jpg"
+              />
+            </label>
+
+            <div className="trip-edit-actions">
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={handleCancelEdit}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                className="button button-primary"
+                disabled={updatingTrip}
+              >
+                {updatingTrip
+                  ? "Saving..."
+                  : "Save changes"}
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
 
       <section className="trip-summary-grid">
         <article className="trip-summary-card">

@@ -14,15 +14,16 @@ const createLocationSchema = Joi.object({
     "string.empty": "Address is required",
   }),
 
-  lat: Joi.number().min(-90).max(90).required().messages({
-    "any.required": "Latitude is required",
+  // Internal/non-user-facing fields. Not collected from the user in the
+  // MVP, so they must stay optional here - location creation must work
+  // without coordinates.
+  lat: Joi.number().min(-90).max(90).optional().messages({
     "number.base": "Latitude must be a number",
     "number.min": "Latitude must be between -90 and 90",
     "number.max": "Latitude must be between -90 and 90",
   }),
 
-  lng: Joi.number().min(-180).max(180).required().messages({
-    "any.required": "Longitude is required",
+  lng: Joi.number().min(-180).max(180).optional().messages({
     "number.base": "Longitude must be a number",
     "number.min": "Longitude must be between -180 and 180",
     "number.max": "Longitude must be between -180 and 180",

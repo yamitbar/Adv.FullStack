@@ -8,7 +8,6 @@ import {
   CalendarDays,
   Image,
   MapPin,
-  Navigation,
   Plus,
 } from "lucide-react";
 
@@ -34,9 +33,6 @@ const initialFormData = {
   title: "",
   placeName: "",
   address: "",
-  lat: "",
-  lng: "",
-  googlePlaceId: "",
   coverImage: "",
   visitedAt: "",
 };
@@ -76,37 +72,16 @@ function AddLocation() {
     }));
   };
 
-  const validateCoordinates = () => {
-    const latitude = Number(formData.lat);
-    const longitude = Number(formData.lng);
-
-    if (
-      Number.isNaN(latitude) ||
-      latitude < -90 ||
-      latitude > 90
-    ) {
-      return "Latitude must be a number between -90 and 90.";
-    }
-
-    if (
-      Number.isNaN(longitude) ||
-      longitude < -180 ||
-      longitude > 180
-    ) {
-      return "Longitude must be a number between -180 and 180.";
-    }
-
-    return null;
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const coordinateError =
-      validateCoordinates();
-
-    if (coordinateError) {
-      setLocalError(coordinateError);
+    if (
+      !formData.placeName.trim() ||
+      !formData.address.trim()
+    ) {
+      setLocalError(
+        "Place name and address are required."
+      );
       return;
     }
 
@@ -114,10 +89,6 @@ function AddLocation() {
       title: formData.title.trim(),
       placeName: formData.placeName.trim(),
       address: formData.address.trim(),
-      lat: Number(formData.lat),
-      lng: Number(formData.lng),
-      googlePlaceId:
-        formData.googlePlaceId.trim(),
       coverImage: formData.coverImage.trim(),
     };
 
@@ -182,20 +153,6 @@ function AddLocation() {
                 <p>
                   Enter the place name and its full
                   address.
-                </p>
-              </div>
-            </article>
-
-            <article>
-              <span>
-                <Navigation size={21} />
-              </span>
-
-              <div>
-                <strong>Map coordinates</strong>
-                <p>
-                  Latitude and longitude will place
-                  the marker on the map.
                 </p>
               </div>
             </article>
@@ -284,38 +241,6 @@ function AddLocation() {
               />
             </label>
 
-            <div className="coordinates-grid">
-              <label>
-                Latitude
-                <input
-                  type="number"
-                  name="lat"
-                  value={formData.lat}
-                  onChange={handleChange}
-                  placeholder="36.1069"
-                  min="-90"
-                  max="90"
-                  step="any"
-                  required
-                />
-              </label>
-
-              <label>
-                Longitude
-                <input
-                  type="number"
-                  name="lng"
-                  value={formData.lng}
-                  onChange={handleChange}
-                  placeholder="-112.1129"
-                  min="-180"
-                  max="180"
-                  step="any"
-                  required
-                />
-              </label>
-            </div>
-
             <label>
               Date visited
               <input
@@ -339,23 +264,6 @@ function AddLocation() {
                   placeholder="https://example.com/location.jpg"
                 />
               </div>
-            </label>
-
-            <label>
-              Google Place ID
-              <input
-                type="text"
-                name="googlePlaceId"
-                value={formData.googlePlaceId}
-                onChange={handleChange}
-                placeholder="Optional for now"
-              />
-
-              <small>
-                This field will be filled
-                automatically after Google Places is
-                connected.
-              </small>
             </label>
 
             {formData.coverImage && (

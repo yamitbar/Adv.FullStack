@@ -109,6 +109,45 @@ export const createTrip = createAsyncThunk(
   }
 );
 
+export const updateTrip = createAsyncThunk(
+  "trips/updateTrip",
+  async ({ tripId, tripData }, thunkAPI) => {
+    try {
+      const { data } = await api.put(
+        `/trips/${tripId}`,
+        tripData
+      );
+
+      return data.trip;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        getErrorMessage(
+          error,
+          "Failed to update trip"
+        )
+      );
+    }
+  }
+);
+
+export const deleteTrip = createAsyncThunk(
+  "trips/deleteTrip",
+  async (tripId, thunkAPI) => {
+    try {
+      await api.delete(`/trips/${tripId}`);
+
+      return tripId;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        getErrorMessage(
+          error,
+          "Failed to delete trip"
+        )
+      );
+    }
+  }
+);
+
 export const createLocation =
   createAsyncThunk(
     "trips/createLocation",
@@ -148,12 +187,16 @@ const tripsSlice = createSlice({
     detailsLoading: false,
     locationsLoading: false,
     creatingLocation: false,
+    updatingTrip: false,
+    deletingTrip: false,
 
     error: null,
     createError: null,
     detailsError: null,
     locationsError: null,
     createLocationError: null,
+    updateTripError: null,
+    deleteTripError: null,
   },
 
   reducers: {
@@ -169,12 +212,22 @@ const tripsSlice = createSlice({
       state.createLocationError = null;
     },
 
+    clearUpdateTripError: (state) => {
+      state.updateTripError = null;
+    },
+
+    clearDeleteTripError: (state) => {
+      state.deleteTripError = null;
+    },
+
     clearTripDetails: (state) => {
       state.selectedTrip = null;
       state.selectedTripLocations = [];
       state.detailsError = null;
       state.locationsError = null;
       state.createLocationError = null;
+      state.updateTripError = null;
+      state.deleteTripError = null;
     },
   },
 
@@ -271,6 +324,59 @@ const tripsSlice = createSlice({
         }
       )
 
+      .addCase(updateTrip.pending, (state) => {
+        state.updatingTrip = true;
+        state.updateTripError = null;
+      })
+
+      .addCase(
+        updateTrip.fulfilled,
+        (state, action) => {
+          state.updatingTrip = false;
+          state.selectedTrip = action.payload;
+
+          const index = state.items.findIndex(
+            (trip) =>
+              trip._id === action.payload._id
+          );
+
+          if (index !== -1) {
+            state.items[index] = action.payload;
+          }
+        }
+      )
+
+      .addCase(
+        updateTrip.rejected,
+        (state, action) => {
+          state.updatingTrip = false;
+          state.updateTripError = action.payload;
+        }
+      )
+
+      .addCase(deleteTrip.pending, (state) => {
+        state.deletingTrip = true;
+        state.deleteTripError = null;
+      })
+
+      .addCase(
+        deleteTrip.fulfilled,
+        (state, action) => {
+          state.deletingTrip = false;
+          state.items = state.items.filter(
+            (trip) => trip._id !== action.payload
+          );
+        }
+      )
+
+      .addCase(
+        deleteTrip.rejected,
+        (state, action) => {
+          state.deletingTrip = false;
+          state.deleteTripError = action.payload;
+        }
+      )
+
       .addCase(
         createLocation.pending,
         (state) => {
@@ -304,6 +410,8 @@ export const {
   clearTripsError,
   clearCreateTripError,
   clearCreateLocationError,
+  clearUpdateTripError,
+  clearDeleteTripError,
   clearTripDetails,
 } = tripsSlice.actions;
 

@@ -22,14 +22,15 @@ const locationSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // Internal/non-user-facing field. Optional: not every location has
+    // known coordinates (e.g. added without a map/places lookup).
     lat: {
       type: Number,
-      required: [true, "Latitude is required"],
     },
 
+    // Internal/non-user-facing field. See note on lat above.
     lng: {
       type: Number,
-      required: [true, "Longitude is required"],
     },
 
     googlePlaceId: {
