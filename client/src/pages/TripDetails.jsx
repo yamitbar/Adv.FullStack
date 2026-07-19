@@ -27,6 +27,7 @@ import {
 
 import {
   Link,
+  useLocation,
   useNavigate,
   useParams,
 } from "react-router-dom";
@@ -85,7 +86,13 @@ function TripDetails() {
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const routerLocation = useLocation();
   const { user } = useAuth();
+
+  const [successMessage, setSuccessMessage] =
+    useState(
+      routerLocation.state?.message || ""
+    );
 
   const [copied, setCopied] =
     useState(false);
@@ -123,6 +130,19 @@ function TripDetails() {
       dispatch(clearTripDetails());
     };
   }, [dispatch, tripId]);
+
+  useEffect(() => {
+    if (routerLocation.state?.message) {
+      // Clear the router state so refreshing or navigating back does
+      // not bring the banner back.
+      navigate(routerLocation.pathname, {
+        replace: true,
+        state: {},
+      });
+    }
+    // Only run once, when the page is entered with a message.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRetry = () => {
     dispatch(fetchTripById(tripId));
@@ -339,6 +359,26 @@ function TripDetails() {
         <ArrowLeft size={18} />
         Back to my trips
       </Link>
+
+      {successMessage && (
+        <div
+          className="trips-success-banner"
+          role="status"
+        >
+          <Check size={18} />
+          <span>{successMessage}</span>
+
+          <button
+            type="button"
+            aria-label="Dismiss message"
+            onClick={() =>
+              setSuccessMessage("")
+            }
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       <section className="trip-hero">
         <div className="trip-hero-media">

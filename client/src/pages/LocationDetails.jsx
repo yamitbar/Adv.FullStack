@@ -9,18 +9,24 @@ import {
   CalendarDays,
   CircleAlert,
   MapPin,
+  Pencil,
   RefreshCw,
   SearchX,
+  Trash2,
   User,
+  X,
 } from "lucide-react";
 
 import {
   Link,
+  useNavigate,
   useParams,
 } from "react-router-dom";
 
 import api, { resolveMediaUrl } from "../services/api";
 import MemoriesSection from "../components/memories/MemoriesSection";
+import { useAuth } from "../context/AuthContext";
+import { isSameEntity } from "../utils/normalizeId";
 
 import "./LocationDetails.css";
 
@@ -36,13 +42,41 @@ function formatDate(dateValue) {
   }).format(new Date(dateValue));
 }
 
+const emptyEditForm = {
+  title: "",
+  placeName: "",
+  address: "",
+  visitedAt: "",
+  coverImage: "",
+};
+
+function toDateInputValue(dateValue) {
+  if (!dateValue) {
+    return "";
+  }
+
+  return new Date(dateValue).toISOString().slice(0, 10);
+}
+
 function LocationDetails() {
   const { locationId } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState("");
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState(
+    emptyEditForm
+  );
+  const [editError, setEditError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const loadLocation = useCallback(async () => {
     setLoading(true);
@@ -84,6 +118,118 @@ function LocationDetails() {
   const backToTripHref = tripId
     ? `/trips/${tripId}`
     : "/trips";
+
+  const isCreator = isSameEntity(
+    location?.createdBy,
+    user?._id
+  );
+
+  const handleStartEdit = () => {
+    setEditForm({
+      title: location.title || "",
+      placeName: location.placeName || "",
+      address: location.address || "",
+      visitedAt: toDateInputValue(
+        location.visitedAt
+      ),
+      coverImage: location.coverImage || "",
+    });
+
+    setEditError("");
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditError("");
+  };
+
+  const handleEditChange = (event) => {
+    setEditError("");
+
+    setEditForm((currentData) => ({
+      ...currentData,
+      [event.target.name]: event.target.value,
+    }));
+  };
+
+  const handleEditSubmit = async (event) => {
+    event.preventDefault();
+
+    if (
+      !editForm.placeName.trim() ||
+      !editForm.address.trim()
+    ) {
+      setEditError(
+        "Place name and address are required."
+      );
+      return;
+    }
+
+    // Joi rejects an empty-string date, so an optional blank date is
+    // simply left out of the request rather than sent as "".
+    const locationData = {
+      title: editForm.title.trim(),
+      placeName: editForm.placeName.trim(),
+      address: editForm.address.trim(),
+      coverImage: editForm.coverImage.trim(),
+    };
+
+    if (editForm.visitedAt) {
+      locationData.visitedAt = editForm.visitedAt;
+    }
+
+    setSaving(true);
+    setEditError("");
+
+    try {
+      const { data } = await api.put(
+        `/locations/${locationId}`,
+        locationData
+      );
+
+      setLocation(data.location);
+      setIsEditing(false);
+    } catch (submitError) {
+      setEditError(
+        submitError?.response?.data?.message ||
+          "Failed to update this location."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    const confirmed = window.confirm(
+      `Delete "${
+        location.title || location.placeName
+      }"? Its memories and uploaded photos will be removed too. This cannot be undone.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeleteError("");
+
+    try {
+      await api.delete(`/locations/${locationId}`);
+
+      navigate(backToTripHref, {
+        state: {
+          message: "Location deleted successfully.",
+        },
+      });
+    } catch (deleteFailure) {
+      setIsDeleting(false);
+      setDeleteError(
+        deleteFailure?.response?.data?.message ||
+          "Failed to delete this location."
+      );
+    }
+  };
 
   if (loading) {
     return (
@@ -217,8 +363,139 @@ function LocationDetails() {
               {location.address}
             </p>
           )}
+
+          {isCreator && (
+            <div className="location-hero-actions">
+              <button
+                type="button"
+                className="button location-hero-action-button"
+                onClick={handleStartEdit}
+              >
+                <Pencil size={16} />
+                Edit
+              </button>
+
+              <button
+                type="button"
+                className="button location-hero-action-button location-delete-button"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                <Trash2 size={16} />
+                {isDeleting
+                  ? "Deleting..."
+                  : "Delete"}
+              </button>
+            </div>
+          )}
         </div>
       </section>
+
+      {deleteError && (
+        <div className="form-error location-details-inline-error">
+          {deleteError}
+        </div>
+      )}
+
+      {isEditing && (
+        <section className="location-edit-card">
+          <div className="location-edit-heading">
+            <h2>Edit location</h2>
+
+            <button
+              type="button"
+              className="location-edit-close"
+              onClick={handleCancelEdit}
+              aria-label="Cancel editing"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {editError && (
+            <div className="form-error">
+              {editError}
+            </div>
+          )}
+
+          <form
+            className="location-edit-form"
+            onSubmit={handleEditSubmit}
+          >
+            <label>
+              Custom title
+              <input
+                type="text"
+                name="title"
+                value={editForm.title}
+                onChange={handleEditChange}
+                maxLength={100}
+              />
+            </label>
+
+            <label>
+              Place name
+              <input
+                type="text"
+                name="placeName"
+                value={editForm.placeName}
+                onChange={handleEditChange}
+                required
+              />
+            </label>
+
+            <label className="location-edit-full">
+              Full address
+              <input
+                type="text"
+                name="address"
+                value={editForm.address}
+                onChange={handleEditChange}
+                required
+              />
+            </label>
+
+            <label>
+              Date visited
+              <input
+                type="date"
+                name="visitedAt"
+                value={editForm.visitedAt}
+                onChange={handleEditChange}
+              />
+            </label>
+
+            <label>
+              Cover image URL
+              <input
+                type="url"
+                name="coverImage"
+                value={editForm.coverImage}
+                onChange={handleEditChange}
+                placeholder="https://example.com/location.jpg"
+              />
+            </label>
+
+            <div className="location-edit-actions">
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={handleCancelEdit}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                className="button button-primary"
+                disabled={saving}
+              >
+                {saving ? "Saving..." : "Save changes"}
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
 
       <section className="location-meta-grid">
         {visitedDate && (

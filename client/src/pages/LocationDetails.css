@@ -100,6 +100,121 @@
   font-size: 1rem;
 }
 
+.location-hero-actions {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.location-hero-action-button {
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.13);
+  color: #ffffff;
+  backdrop-filter: blur(12px);
+}
+
+.location-delete-button {
+  border-color: rgba(196, 66, 66, 0.55);
+  color: #ffdede;
+}
+
+.location-delete-button:hover {
+  background: rgba(196, 66, 66, 0.25);
+}
+
+.location-delete-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.location-details-inline-error {
+  margin-top: 1.25rem;
+}
+
+.location-edit-card {
+  margin-top: 1.5rem;
+  padding: 1.75rem;
+  border: 1px solid rgba(25, 72, 55, 0.12);
+  border-radius: 1.4rem;
+  background: #ffffff;
+  box-shadow: 0 15px 38px rgba(24, 58, 45, 0.06);
+}
+
+.location-edit-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.location-edit-heading h2 {
+  margin: 0;
+  color: #10261e;
+  font-size: 1.4rem;
+}
+
+.location-edit-close {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 0;
+  border-radius: 11px;
+  color: #4c584f;
+  background: #edf4f0;
+  cursor: pointer;
+}
+
+.location-edit-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.location-edit-full {
+  grid-column: 1 / -1;
+}
+
+.location-edit-form label {
+  display: grid;
+  gap: 0.5rem;
+  color: #18352a;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.location-edit-form input {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 1rem;
+  border: 1px solid rgba(28, 72, 55, 0.18);
+  border-radius: 1rem;
+  background: #fbfcfa;
+  color: #10261e;
+  font: inherit;
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.location-edit-form input:focus {
+  border-color: #377d61;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(55, 125, 97, 0.12);
+}
+
+.location-edit-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  padding-top: 0.5rem;
+}
+
 .location-meta-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -214,6 +329,27 @@
   }
 
   .location-details-state-actions .button {
+    justify-content: center;
+  }
+
+  .location-hero-actions,
+  .location-hero-actions .button {
+    width: 100%;
+  }
+
+  .location-hero-actions .button {
+    justify-content: center;
+  }
+
+  .location-edit-form {
+    grid-template-columns: 1fr;
+  }
+
+  .location-edit-actions {
+    flex-direction: column-reverse;
+  }
+
+  .location-edit-actions .button {
     justify-content: center;
   }
 }
