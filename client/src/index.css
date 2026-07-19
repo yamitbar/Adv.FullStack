@@ -629,6 +629,22 @@ img {
   transition: transform 600ms ease;
 }
 
+.trip-preview-card-placeholder {
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(85, 150, 120, 0.3),
+      transparent 45%
+    ),
+    linear-gradient(
+      145deg,
+      #e6f0eb,
+      #f7f4ec
+    );
+}
+
 .trip-preview-card:hover img {
   transform: scale(1.06);
 }
@@ -770,6 +786,15 @@ img {
   flex-direction: column;
   gap: 4px;
   padding-right: 10px;
+}
+
+.map-memory-preview-badge {
+  color: var(--forest-800);
+}
+
+.map-memory-preview-badge svg {
+  flex: 0 0 auto;
+  color: var(--forest-700);
 }
 
 .map-memory-preview strong {

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   ArrowRight,
   Camera,
@@ -8,34 +9,49 @@ import {
   Users,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import {
+  useDispatch,
+  useSelector,
+} from "react-redux";
 import { useAuth } from "../context/AuthContext";
+import { resolveMediaUrl } from "../services/api";
+import { fetchTrips } from "../store/slices/tripsSlice";
 
-const previewTrips = [
-  {
-    id: "usa-road-trip",
-    title: "USA Road Trip",
-    location: "United States",
-    dates: "August 1–20, 2026",
-    image:
-      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=85",
-  },
-  {
-    id: "italy-summer",
-    title: "Summer in Italy",
-    location: "Italy",
-    dates: "September 2025",
-    image:
-      "https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?auto=format&fit=crop&w=1200&q=85",
-  },
-  {
-    id: "alpine-weekend",
-    title: "Alpine Weekend",
-    location: "Switzerland",
-    dates: "June 2025",
-    image:
-      "https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?auto=format&fit=crop&w=1200&q=85",
-  },
-];
+function formatTripDateRange(startDate, endDate) {
+  if (!startDate) {
+    return "Dates not set yet";
+  }
+
+  const formatter = new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+  if (!endDate) {
+    return formatter.format(new Date(startDate));
+  }
+
+  return `${formatter.format(
+    new Date(startDate)
+  )} – ${formatter.format(new Date(endDate))}`;
+}
+
+// Returns the number of whole days between now and a future date, or
+// null if the date is missing or already in the past.
+function getDaysUntil(dateValue) {
+  if (!dateValue) {
+    return null;
+  }
+
+  const diffMs =
+    new Date(dateValue).setHours(0, 0, 0, 0) -
+    new Date().setHours(0, 0, 0, 0);
+
+  const days = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  return days > 0 ? days : null;
+}
 
 const features = [
   {
@@ -60,6 +76,32 @@ const features = [
 
 function Home() {
   const { isAuthenticated } = useAuth();
+  const dispatch = useDispatch();
+
+  const { items: trips } = useSelector(
+    (state) => state.trips
+  );
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      dispatch(fetchTrips());
+    }
+  }, [isAuthenticated, dispatch]);
+
+  // Trips are sorted newest-first by the API, so the first entry
+  // doubles as the "recent / upcoming" trip shown in the hero card.
+  const featuredTrip =
+    isAuthenticated && trips.length > 0
+      ? trips[0]
+      : null;
+
+  const daysUntilFeaturedTrip = featuredTrip
+    ? getDaysUntil(featuredTrip.startDate)
+    : null;
+
+  const recentTrips = isAuthenticated
+    ? trips.slice(0, 3)
+    : [];
 
   return (
     <>
@@ -110,26 +152,53 @@ function Home() {
             </div>
           </div>
 
-          <div className="hero-floating-card">
-            <span className="floating-card-label">
-              Upcoming journey
-            </span>
+          {featuredTrip && (
+            <Link
+              to={`/trips/${featuredTrip._id}`}
+              className="hero-floating-card"
+            >
+              <span className="floating-card-label">
+                {daysUntilFeaturedTrip
+                  ? "Upcoming journey"
+                  : "Recent journey"}
+              </span>
 
-            <strong>USA Family Trip</strong>
+              <strong>{featuredTrip.title}</strong>
 
-            <p>
-              17 days until your next adventure
-            </p>
+              <p>
+                {daysUntilFeaturedTrip
+                  ? `${daysUntilFeaturedTrip} day${
+                      daysUntilFeaturedTrip === 1
+                        ? ""
+                        : "s"
+                    } until your next adventure`
+                  : "Continue documenting this journey"}
+              </p>
 
-            <div className="floating-card-progress">
-              <span />
-            </div>
+              <div className="floating-card-progress">
+                <span />
+              </div>
 
-            <div className="floating-card-footer">
-              <span>August 1–20</span>
-              <span>5 travelers</span>
-            </div>
-          </div>
+              <div className="floating-card-footer">
+                <span>
+                  {formatTripDateRange(
+                    featuredTrip.startDate,
+                    featuredTrip.endDate
+                  )}
+                </span>
+
+                <span>
+                  {featuredTrip.participants
+                    ?.length || 1}{" "}
+                  traveler
+                  {featuredTrip.participants
+                    ?.length === 1
+                    ? ""
+                    : "s"}
+                </span>
+              </div>
+            </Link>
+          )}
         </div>
       </section>
 
@@ -175,53 +244,71 @@ function Home() {
         </div>
       </section>
 
-      <section className="section trips-preview-section">
-        <div className="shell">
-          <div className="section-heading-row">
-            <div className="section-heading">
-              <span className="section-kicker">
-                Your recent journeys
-              </span>
-              <h2>Continue where you left off</h2>
-            </div>
+      {recentTrips.length > 0 && (
+        <section className="section trips-preview-section">
+          <div className="shell">
+            <div className="section-heading-row">
+              <div className="section-heading">
+                <span className="section-kicker">
+                  Your recent journeys
+                </span>
+                <h2>Continue where you left off</h2>
+              </div>
 
-            <Link
-              to="/trips"
-              className="text-link"
-            >
-              View all trips
-              <ArrowRight size={17} />
-            </Link>
-          </div>
-
-          <div className="trip-preview-grid">
-            {previewTrips.map((trip) => (
               <Link
                 to="/trips"
-                key={trip.id}
-                className="trip-preview-card"
+                className="text-link"
               >
-                <img
-                  src={trip.image}
-                  alt={trip.title}
-                />
-
-                <div className="trip-preview-overlay" />
-
-                <div className="trip-preview-content">
-                  <span>
-                    <MapPin size={14} />
-                    {trip.location}
-                  </span>
-
-                  <h3>{trip.title}</h3>
-                  <p>{trip.dates}</p>
-                </div>
+                View all trips
+                <ArrowRight size={17} />
               </Link>
-            ))}
+            </div>
+
+            <div className="trip-preview-grid">
+              {recentTrips.map((trip) => {
+                const previewImage = resolveMediaUrl(
+                  trip.coverImage
+                );
+
+                return (
+                  <Link
+                    to={`/trips/${trip._id}`}
+                    key={trip._id}
+                    className="trip-preview-card"
+                  >
+                    {previewImage ? (
+                      <img
+                        src={previewImage}
+                        alt={trip.title}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="trip-preview-card-placeholder" />
+                    )}
+
+                    <div className="trip-preview-overlay" />
+
+                    <div className="trip-preview-content">
+                      <span>
+                        <MapPin size={14} />
+                        {trip.destination}
+                      </span>
+
+                      <h3>{trip.title}</h3>
+                      <p>
+                        {formatTripDateRange(
+                          trip.startDate,
+                          trip.endDate
+                        )}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="section map-showcase-section">
         <div className="shell map-showcase">
@@ -266,15 +353,14 @@ function Home() {
               <MapPin size={18} />
             </span>
 
-            <div className="map-memory-preview">
-              <img
-                src="https://images.unsplash.com/photo-1483347756197-71ef80e95f73?auto=format&fit=crop&w=300&q=80"
-                alt="Travel memory"
-              />
+            <div className="map-memory-preview map-memory-preview-badge">
+              <Compass size={20} />
 
               <div>
-                <strong>Yellowstone</strong>
-                <span>12 memories</span>
+                <strong>Coming next</strong>
+                <span>
+                  Your pins will appear here
+                </span>
               </div>
             </div>
           </div>
