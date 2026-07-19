@@ -39,6 +39,10 @@ const AddLocation = lazy(() =>
   import("./pages/AddLocation")
 );
 
+const LocationDetails = lazy(() =>
+  import("./pages/LocationDetails")
+);
+
 const NotFound = lazy(() =>
   import("./pages/NotFound")
 );
@@ -106,10 +110,7 @@ function App() {
             path="/locations/:locationId"
             element={
               <ProtectedRoute>
-                <PlaceholderPage
-                  title="Location Memories"
-                  description="The complete location and memories experience will be built next."
-                />
+                <LocationDetails />
               </ProtectedRoute>
             }
           />

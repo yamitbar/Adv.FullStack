@@ -1,0 +1,219 @@
+.location-details-page {
+  width: min(1000px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 8.5rem 0 6rem;
+}
+
+.location-details-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  color: #315f4e;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.location-hero {
+  position: relative;
+  min-height: 320px;
+  overflow: hidden;
+  border-radius: 2rem;
+  background: #173e30;
+  box-shadow: 0 26px 70px rgba(19, 54, 41, 0.18);
+}
+
+.location-hero-media,
+.location-hero-media img,
+.location-hero-placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.location-hero-media img {
+  object-fit: cover;
+}
+
+.location-hero-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.82);
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(117, 184, 150, 0.55),
+      transparent 44%
+    ),
+    linear-gradient(145deg, #244f3e, #102d23);
+}
+
+.location-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      0deg,
+      rgba(9, 31, 23, 0.92),
+      rgba(9, 31, 23, 0.25) 65%
+    );
+}
+
+.location-hero-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 320px;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: clamp(1.5rem, 5vw, 3rem);
+  color: #ffffff;
+}
+
+.location-place-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: fit-content;
+  margin-bottom: 0.8rem;
+  color: #cfe9db;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.location-hero-content h1 {
+  max-width: 700px;
+  margin: 0;
+  font-size: clamp(2.2rem, 5vw, 3.4rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.location-address-line {
+  max-width: 600px;
+  margin: 0.9rem 0 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 1rem;
+}
+
+.location-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.location-meta-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.3rem;
+  border: 1px solid rgba(25, 72, 55, 0.12);
+  border-radius: 1.25rem;
+  background: #ffffff;
+  box-shadow: 0 15px 38px rgba(24, 58, 45, 0.06);
+}
+
+.location-meta-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  border-radius: 14px;
+  background: #e6f0eb;
+  color: #2b6f55;
+}
+
+.location-meta-card div {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.location-meta-card span {
+  color: #77827c;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.location-meta-card strong {
+  overflow: hidden;
+  color: #112b21;
+  font-size: 0.98rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.location-details-state,
+.locations-empty-state {
+  display: flex;
+  min-height: 420px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 2rem;
+  border: 1px solid rgba(25, 72, 55, 0.12);
+  border-radius: 1.8rem;
+  background: #ffffff;
+  text-align: center;
+}
+
+.location-details-state h1 {
+  margin: 1.2rem 0 0.55rem;
+  color: #10261e;
+}
+
+.location-details-state p {
+  max-width: 480px;
+  margin: 0 0 1.5rem;
+  color: #6c7872;
+  line-height: 1.7;
+}
+
+.location-details-state-icon {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  place-items: center;
+  border-radius: 23px;
+  color: #2b7056;
+  background: #e6f0eb;
+}
+
+.location-details-state-icon.error {
+  color: #a83d3d;
+  background: #fdeaea;
+}
+
+.location-details-state-actions {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (max-width: 700px) {
+  .location-details-page {
+    padding: 7.5rem 0 4rem;
+  }
+
+  .location-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .location-details-state-actions {
+    flex-direction: column-reverse;
+    width: 100%;
+  }
+
+  .location-details-state-actions .button {
+    justify-content: center;
+  }
+}
