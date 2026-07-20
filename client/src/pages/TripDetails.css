@@ -287,6 +287,22 @@
   box-shadow: 0 15px 38px rgba(24, 58, 45, 0.06);
 }
 
+.trip-summary-card-button {
+  width: 100%;
+  border: 1px solid rgba(25, 72, 55, 0.12);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.trip-summary-card-button:hover,
+.trip-summary-card-button:focus-visible {
+  border-color: rgba(43, 112, 86, 0.4);
+  box-shadow: 0 15px 38px rgba(24, 58, 45, 0.12);
+}
+
 .trip-summary-icon {
   display: grid;
   width: 52px;
@@ -406,16 +422,8 @@
   padding: 1.35rem;
 }
 
-.location-place-name {
-  color: #34785e;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
 .location-card-content h3 {
-  margin: 0.4rem 0 1rem;
+  margin: 0 0 1rem;
   color: #10261e;
   font-size: 1.35rem;
 }

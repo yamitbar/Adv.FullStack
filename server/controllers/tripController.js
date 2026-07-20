@@ -51,7 +51,10 @@ const getTrips = async (req, res, next) => {
         { createdBy: req.user._id },
         { participants: req.user._id },
       ],
-    }).sort({ createdAt: -1 });
+    })
+      .populate("createdBy", "name")
+      .populate("participants", "name")
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -71,7 +74,9 @@ const getTripById = async (req, res, next) => {
         { createdBy: req.user._id },
         { participants: req.user._id },
       ],
-    });
+    })
+      .populate("createdBy", "name")
+      .populate("participants", "name");
 
     if (!trip) {
       return res.status(404).json({
@@ -123,6 +128,8 @@ const updateTrip = async (req, res, next) => {
 
     Object.assign(trip, req.body);
     await trip.save();
+    await trip.populate("createdBy", "name");
+    await trip.populate("participants", "name");
 
     res.status(200).json({
       success: true,
@@ -186,6 +193,8 @@ const joinTrip = async (req, res, next) => {
     trip.participants.push(req.user._id);
 
     await trip.save();
+    await trip.populate("createdBy", "name");
+    await trip.populate("participants", "name");
 
     res.status(200).json({
       success: true,

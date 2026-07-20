@@ -33,6 +33,7 @@ import {
 } from "react-router-dom";
 
 import LocationCard from "../components/trips/LocationCard";
+import ParticipantsModal from "../components/trips/ParticipantsModal";
 import { resolveMediaUrl } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -98,6 +99,9 @@ function TripDetails() {
     );
 
   const [copied, setCopied] =
+    useState(false);
+
+  const [isParticipantsOpen, setIsParticipantsOpen] =
     useState(false);
 
   const [isEditing, setIsEditing] =
@@ -612,7 +616,12 @@ function TripDetails() {
           </div>
         </article>
 
-        <article className="trip-summary-card">
+        <button
+          type="button"
+          className="trip-summary-card trip-summary-card-button"
+          onClick={() => setIsParticipantsOpen(true)}
+          aria-haspopup="dialog"
+        >
           <span className="trip-summary-icon">
             <Users size={22} />
           </span>
@@ -628,9 +637,10 @@ function TripDetails() {
               {participantsCount === 1
                 ? "Traveler"
                 : "Travelers"}
+              {" · view names"}
             </small>
           </div>
-        </article>
+        </button>
 
         <article className="trip-summary-card invite-card">
           <span className="trip-summary-icon">
@@ -766,6 +776,15 @@ function TripDetails() {
             </div>
           )}
       </section>
+
+      {isParticipantsOpen && (
+        <ParticipantsModal
+          trip={trip}
+          onClose={() =>
+            setIsParticipantsOpen(false)
+          }
+        />
+      )}
     </main>
   );
 }
