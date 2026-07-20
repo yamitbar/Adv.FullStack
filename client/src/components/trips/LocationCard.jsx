@@ -33,7 +33,7 @@ function LocationCard({ location }) {
             src={imageUrl}
             alt={
               location.title ||
-              location.placeName
+              location.address
             }
             loading="lazy"
           />
@@ -45,13 +45,9 @@ function LocationCard({ location }) {
       </div>
 
       <div className="location-card-content">
-        <span className="location-place-name">
-          {location.placeName}
-        </span>
-
         <h3>
           {location.title ||
-            location.placeName}
+            location.address}
         </h3>
 
         <p className="location-address">

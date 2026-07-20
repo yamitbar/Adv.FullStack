@@ -4,10 +4,10 @@ const Joi = require("joi");
 const createLocationSchema = Joi.object({
   title: Joi.string().trim().max(100).allow("").optional(),
 
-  placeName: Joi.string().trim().required().messages({
-    "any.required": "Place name is required",
-    "string.empty": "Place name is required",
-  }),
+  // No longer collected from the user - the UI only captures address
+  // and an optional custom title. Kept optional (not stripped) so any
+  // caller that still sends it (e.g. api-tests.rest) doesn't break.
+  placeName: Joi.string().trim().allow("").optional(),
 
   address: Joi.string().trim().required().messages({
     "any.required": "Address is required",
@@ -40,9 +40,8 @@ const createLocationSchema = Joi.object({
 const updateLocationSchema = Joi.object({
   title: Joi.string().trim().max(100).allow("").optional(),
 
-  placeName: Joi.string().trim().min(1).optional().messages({
-    "string.empty": "Place name cannot be empty",
-  }),
+  // No longer collected from the user - see createLocationSchema.
+  placeName: Joi.string().trim().allow("").optional(),
 
   address: Joi.string().trim().min(1).optional().messages({
     "string.empty": "Address cannot be empty",

@@ -31,7 +31,6 @@ import "./AddLocation.css";
 
 const initialFormData = {
   title: "",
-  placeName: "",
   address: "",
   coverImage: "",
   visitedAt: "",
@@ -75,19 +74,13 @@ function AddLocation() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (
-      !formData.placeName.trim() ||
-      !formData.address.trim()
-    ) {
-      setLocalError(
-        "Place name and address are required."
-      );
+    if (!formData.address.trim()) {
+      setLocalError("Address is required.");
       return;
     }
 
     const locationData = {
       title: formData.title.trim(),
-      placeName: formData.placeName.trim(),
       address: formData.address.trim(),
       coverImage: formData.coverImage.trim(),
     };
@@ -151,8 +144,8 @@ function AddLocation() {
               <div>
                 <strong>Place information</strong>
                 <p>
-                  Enter the place name and its full
-                  address.
+                  Enter the full address of the
+                  place you visited.
                 </p>
               </div>
             </article>
@@ -215,18 +208,6 @@ function AddLocation() {
                 Optional. This can describe your
                 experience at the place.
               </small>
-            </label>
-
-            <label>
-              Place name
-              <input
-                type="text"
-                name="placeName"
-                value={formData.placeName}
-                onChange={handleChange}
-                placeholder="Grand Canyon National Park"
-                required
-              />
             </label>
 
             <label>

@@ -72,19 +72,6 @@
   color: #ffffff;
 }
 
-.location-place-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  width: fit-content;
-  margin-bottom: 0.8rem;
-  color: #cfe9db;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .location-hero-content h1 {
   max-width: 700px;
   margin: 0;

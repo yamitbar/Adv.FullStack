@@ -44,7 +44,6 @@ function formatDate(dateValue) {
 
 const emptyEditForm = {
   title: "",
-  placeName: "",
   address: "",
   visitedAt: "",
   coverImage: "",
@@ -127,7 +126,6 @@ function LocationDetails() {
   const handleStartEdit = () => {
     setEditForm({
       title: location.title || "",
-      placeName: location.placeName || "",
       address: location.address || "",
       visitedAt: toDateInputValue(
         location.visitedAt
@@ -156,13 +154,8 @@ function LocationDetails() {
   const handleEditSubmit = async (event) => {
     event.preventDefault();
 
-    if (
-      !editForm.placeName.trim() ||
-      !editForm.address.trim()
-    ) {
-      setEditError(
-        "Place name and address are required."
-      );
+    if (!editForm.address.trim()) {
+      setEditError("Address is required.");
       return;
     }
 
@@ -170,7 +163,6 @@ function LocationDetails() {
     // simply left out of the request rather than sent as "".
     const locationData = {
       title: editForm.title.trim(),
-      placeName: editForm.placeName.trim(),
       address: editForm.address.trim(),
       coverImage: editForm.coverImage.trim(),
     };
@@ -203,7 +195,7 @@ function LocationDetails() {
   const handleDelete = async () => {
     const confirmed = window.confirm(
       `Delete "${
-        location.title || location.placeName
+        location.title || location.address
       }"? Its memories and uploaded photos will be removed too. This cannot be undone.`
     );
 
@@ -335,7 +327,7 @@ function LocationDetails() {
             <img
               src={imageUrl}
               alt={
-                location.title || location.placeName
+                location.title || location.address
               }
               loading="lazy"
             />
@@ -349,13 +341,8 @@ function LocationDetails() {
         </div>
 
         <div className="location-hero-content">
-          <span className="location-place-badge">
-            <MapPin size={16} />
-            {location.placeName}
-          </span>
-
           <h1>
-            {location.title || location.placeName}
+            {location.title || location.address}
           </h1>
 
           {location.address && (
@@ -430,17 +417,6 @@ function LocationDetails() {
                 value={editForm.title}
                 onChange={handleEditChange}
                 maxLength={100}
-              />
-            </label>
-
-            <label>
-              Place name
-              <input
-                type="text"
-                name="placeName"
-                value={editForm.placeName}
-                onChange={handleEditChange}
-                required
               />
             </label>
 

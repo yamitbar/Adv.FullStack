@@ -10,10 +10,15 @@ const locationSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Internal/legacy field. No longer collected from the user (Batch 6
+    // final manual QA fixes) - the UI only captures a free-text address
+    // and an optional custom title. Kept optional (not required) rather
+    // than removed so documents created by earlier batches that already
+    // have a placeName keep working unchanged.
     placeName: {
       type: String,
-      required: [true, "Place name is required"],
       trim: true,
+      default: "",
     },
 
     address: {

@@ -10,6 +10,7 @@ import {
 
 import AppLayout from "./components/layout/AppLayout";
 import ProtectedRoute from "./components/common/ProtectedRoute";
+import ScrollToTop from "./components/common/ScrollToTop";
 
 const Home = lazy(() =>
   import("./pages/Home")
@@ -58,77 +59,81 @@ function PageLoader() {
 
 function App() {
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        <Route element={<AppLayout />}>
+    <>
+      <ScrollToTop />
+
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route element={<AppLayout />}>
+            <Route
+              path="/"
+              element={<Home />}
+            />
+
+            <Route
+              path="/trips"
+              element={
+                <ProtectedRoute>
+                  <MyTrips />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/trips/new"
+              element={
+                <ProtectedRoute>
+                  <CreateTrip />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/trips/:tripId"
+              element={
+                <ProtectedRoute>
+                  <TripDetails />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/trips/:tripId/locations/new"
+              element={
+                <ProtectedRoute>
+                  <AddLocation />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/locations/:locationId"
+              element={
+                <ProtectedRoute>
+                  <LocationDetails />
+                </ProtectedRoute>
+              }
+            />
+
+          </Route>
+
           <Route
-            path="/"
-            element={<Home />}
+            path="/login"
+            element={<Login />}
           />
 
           <Route
-            path="/trips"
-            element={
-              <ProtectedRoute>
-                <MyTrips />
-              </ProtectedRoute>
-            }
+            path="/register"
+            element={<Register />}
           />
 
           <Route
-            path="/trips/new"
-            element={
-              <ProtectedRoute>
-                <CreateTrip />
-              </ProtectedRoute>
-            }
+            path="*"
+            element={<NotFound />}
           />
-
-          <Route
-            path="/trips/:tripId"
-            element={
-              <ProtectedRoute>
-                <TripDetails />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/trips/:tripId/locations/new"
-            element={
-              <ProtectedRoute>
-                <AddLocation />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/locations/:locationId"
-            element={
-              <ProtectedRoute>
-                <LocationDetails />
-              </ProtectedRoute>
-            }
-          />
-
-        </Route>
-
-        <Route
-          path="/login"
-          element={<Login />}
-        />
-
-        <Route
-          path="/register"
-          element={<Register />}
-        />
-
-        <Route
-          path="*"
-          element={<NotFound />}
-        />
-      </Routes>
-    </Suspense>
+        </Routes>
+      </Suspense>
+    </>
   );
 }
 
