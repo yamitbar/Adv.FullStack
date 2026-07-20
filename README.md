@@ -9,7 +9,7 @@ Built as a university full-stack final project on the MERN stack (MongoDB, Expre
 - Email/password registration and login, with a JWT-protected session.
 - Create, view, edit, and delete trips.
 - Invite other registered users to a trip with a short invite code; joined users become trip participants.
-- Create, view, edit, and delete locations within a trip (place name, address, visit date, optional cover image — no map coordinates are collected or shown).
+- Create, view, edit, and delete locations within a trip (full address, visit date, optional custom title and cover image — no map coordinates or place metadata are collected or shown).
 - Create, view, edit, and delete text memories attached to a location.
 - Upload one or more photos to a memory (JPEG/PNG/WebP, up to 5 images per request, 5MB each).
 - Authorization enforced at every read/write endpoint: only a trip's creator and participants can see or modify its locations and memories; only a memory's/location's own creator can edit or delete it.
@@ -189,13 +189,13 @@ Both are active in the same happy path: `ProtectedRoute` and the navbar read `Au
 
 - Uploaded images are stored on local disk, which does not persist across Heroku dyno restarts/redeploys (see Uploads and media above).
 - No automated test suite (unit/integration tests) exists yet — verification has been manual/exploratory (see Testing section).
-- No map view or user profile/statistics page exists yet — see Future improvements.
+- No map view, Google Places integration, video memories, comments, notifications, or user profile/statistics page — these were intentionally descoped for this MVP (see MVP feature list above), not partially built or pending.
 - No password-reset or email-verification flow.
 
 ## Future improvements
 
 - Move uploaded images to persistent object storage (e.g. S3-compatible bucket) so they survive redeploys.
-- Build the map view and profile/statistics page that are currently placeholders.
+- Add a map view and a profile/statistics page (out of scope for this MVP; see Known limitations).
 - Add automated backend (Jest/Supertest) and frontend (Vitest/RTL) tests.
 - Add pagination for trips/locations/memories lists as data volume grows.
 
@@ -233,7 +233,7 @@ SPA fallback routing (so refreshing `/trips/:id` doesn't 404) is already configu
 
 There is no automated test suite. What follows is deliberately split into three categories, because they carry very different levels of confidence — do not read "runtime API verification" as the same thing as "browser QA passed."
 
-**Runtime API verification (real database, real HTTP requests).** The project owner ran the requests in `api-tests.rest` against a real local MongoDB instance and a real running server, and reported 32/32 passing after fixing a genuine bug this uncovered: `server/middleware/upload.js` was missing `const path = require("path")`, so every image upload failed at runtime with `ReferenceError: path is not defined` — an error invisible to static syntax checks, only reachable by actually calling the upload endpoint. That fix is committed. This round of testing was performed locally by the project owner, not witnessed or independently reproduced inside this assistant's sandbox (which cannot reach a local MongoDB instance — see `docs/development-notes/batch-4-runtime-delivery-and-docs.md` for why).
+**Runtime API verification (real database, real HTTP requests).** The 32 requests in `api-tests.rest` were manually executed successfully by the project owner against a real local MongoDB instance and a real running server — this is manual execution via the VS Code REST Client extension, not an automated test run (there is no test runner or CI involved). That pass uncovered one genuine bug: `server/middleware/upload.js` was missing `const path = require("path")`, so every image upload failed at runtime with `ReferenceError: path is not defined` — an error invisible to static syntax checks, only reachable by actually calling the upload endpoint. That fix is committed. This round of testing was performed locally by the project owner, not witnessed or independently reproduced inside this assistant's sandbox (which cannot reach a local MongoDB instance — see `docs/development-notes/batch-4-runtime-delivery-and-docs.md` for why).
 
 **Static verification (reproducible by anyone, anytime).** `node --check` on every backend file, `npm run lint` (oxlint), and `npm run build` (Vite) on the frontend. These pass as of the current commit.
 
