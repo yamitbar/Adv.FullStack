@@ -35,7 +35,10 @@ import {
 import LocationCard from "../components/trips/LocationCard";
 import { resolveMediaUrl } from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import { isSameEntity } from "../utils/normalizeId";
+import {
+  getTravelerCount,
+  isSameEntity,
+} from "../utils/normalizeId";
 
 import {
   clearTripDetails,
@@ -347,8 +350,7 @@ function TripDetails() {
     trip.coverImage
   );
 
-  const participantsCount =
-    trip.participants?.length || 1;
+  const participantsCount = getTravelerCount(trip);
 
   return (
     <main className="trip-details-page">

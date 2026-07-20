@@ -6,6 +6,10 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { resolveMediaUrl } from "../../services/api";
+import {
+  formatTravelerCount,
+  getTravelerCount,
+} from "../../utils/normalizeId";
 
 function formatDate(dateValue) {
   if (!dateValue) {
@@ -64,11 +68,9 @@ function TripCard({ trip }) {
 
           <span>
             <Users size={17} />
-            {trip.participants?.length || 1}{" "}
-            participant
-            {trip.participants?.length === 1
-              ? ""
-              : "s"}
+            {formatTravelerCount(
+              getTravelerCount(trip)
+            )}
           </span>
         </div>
 

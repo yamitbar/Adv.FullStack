@@ -16,6 +16,10 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { resolveMediaUrl } from "../services/api";
 import { fetchTrips } from "../store/slices/tripsSlice";
+import {
+  formatTravelerCount,
+  getTravelerCount,
+} from "../utils/normalizeId";
 
 function formatTripDateRange(startDate, endDate) {
   if (!startDate) {
@@ -70,7 +74,7 @@ const features = [
     icon: Camera,
     title: "Keep every memory",
     description:
-      "Connect photos, videos and stories to the exact places where they happened.",
+      "Connect photos and stories to the exact places where they happened.",
   },
 ];
 
@@ -124,9 +128,9 @@ function Home() {
 
             <p>
               Create collaborative travel journals
-              with interactive maps, shared
-              memories and the people who made each
-              adventure unforgettable.
+              with shared locations, memories and
+              the people who made each adventure
+              unforgettable.
             </p>
 
             <div className="hero-actions">
@@ -180,13 +184,9 @@ function Home() {
                 </span>
 
                 <span>
-                  {featuredTrip.participants
-                    ?.length || 1}{" "}
-                  traveler
-                  {featuredTrip.participants
-                    ?.length === 1
-                    ? ""
-                    : "s"}
+                  {formatTravelerCount(
+                    getTravelerCount(featuredTrip)
+                  )}
                 </span>
               </div>
             </Link>
@@ -202,8 +202,8 @@ function Home() {
             </span>
 
             <h2>
-              More than a map. A living travel
-              journal.
+              A living travel journal for the
+              whole group.
             </h2>
 
             <p>
