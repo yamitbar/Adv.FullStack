@@ -19,6 +19,7 @@ const {
   updateMemory,
   deleteMemory,
   uploadMemoryImages,
+  removeMemoryImage,
 } = require("../controllers/memoryController");
 
 const locationMemoryRouter = express.Router({
@@ -48,6 +49,15 @@ memoryRouter.post(
   authorizeMemoryImageUpload,
   uploadImages.array("images", 5),
   uploadMemoryImages
+);
+
+// Remove a single image from a memory without deleting the memory
+// itself. Uses the plain stored filename (e.g. "169..." not the full
+// "/uploads/169..." path) as the route param.
+memoryRouter.delete(
+  "/:id/images/:filename",
+  protect,
+  removeMemoryImage
 );
 
 // Routes for a specific memory

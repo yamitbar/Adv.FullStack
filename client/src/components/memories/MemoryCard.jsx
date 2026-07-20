@@ -24,9 +24,17 @@ import { isSameEntity } from "../../utils/normalizeId";
 
 import {
   deleteMemory,
+  removeMemoryImage,
   updateMemory,
   uploadMemoryImages,
 } from "../../store/slices/memoriesSlice";
+
+// Stored image paths always look like "/uploads/<filename>" (see
+// memoryController.js). The filename alone is what the remove-image
+// route expects.
+function getImageFilename(imagePath) {
+  return imagePath.split("/").pop();
+}
 
 import "./MemoryCard.css";
 
@@ -59,6 +67,8 @@ function MemoryCard({ memory }) {
     deleteError,
     uploadingMemoryId,
     uploadError,
+    removingImage,
+    removeImageError,
   } = useSelector((state) => state.memories);
 
   const isOwner = isSameEntity(
@@ -123,6 +133,25 @@ function MemoryCard({ memory }) {
     }
 
     dispatch(deleteMemory(memory._id));
+  };
+
+  const handleRemoveImage = (imagePath) => {
+    const filename = getImageFilename(imagePath);
+
+    const confirmed = window.confirm(
+      "Remove this image? The rest of the memory will stay."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    dispatch(
+      removeMemoryImage({
+        memoryId: memory._id,
+        filename,
+      })
+    );
   };
 
   const handlePickImages = () => {
@@ -244,18 +273,52 @@ function MemoryCard({ memory }) {
 
       {memory.images && memory.images.length > 0 && (
         <div className="memory-card-images">
-          {memory.images.map((imagePath) => (
-            <img
-              key={imagePath}
-              src={resolveMediaUrl(imagePath)}
-              alt={`Memory photo from ${
-                memory.content || creatorName
-              }`}
-              loading="lazy"
-            />
-          ))}
+          {memory.images.map((imagePath) => {
+            const filename =
+              getImageFilename(imagePath);
+
+            const isRemovingThisImage =
+              removingImage?.memoryId === memory._id &&
+              removingImage?.filename === filename;
+
+            return (
+              <div
+                key={imagePath}
+                className="memory-card-image"
+              >
+                <img
+                  src={resolveMediaUrl(imagePath)}
+                  alt={`Memory photo from ${
+                    memory.content || creatorName
+                  }`}
+                  loading="lazy"
+                />
+
+                {isOwner && (
+                  <button
+                    type="button"
+                    className="memory-card-image-remove"
+                    aria-label="Remove this image"
+                    onClick={() =>
+                      handleRemoveImage(imagePath)
+                    }
+                    disabled={isRemovingThisImage}
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
+
+      {removeImageError &&
+        removeImageError.memoryId === memory._id && (
+          <p className="memory-card-error">
+            {removeImageError.message}
+          </p>
+        )}
 
       {isOwner && (
         <div className="memory-card-footer">
