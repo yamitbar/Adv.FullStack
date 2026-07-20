@@ -1,3 +1,5 @@
+const path = require("path");
+
 const Location = require("../models/Location");
 const Trip = require("../models/Trip");
 const Memory = require("../models/Memory");
@@ -42,6 +44,12 @@ const createMemory = async (req, res, next) => {
       location: locationId,
       createdBy: req.user._id,
     });
+
+    // Populate createdBy before responding so the frontend gets the
+    // creator's name immediately, instead of a bare ObjectId that only
+    // becomes a name after a later fetch/refetch (see getMemoriesByLocation
+    // and getMemoryById below, which already did this correctly).
+    await memory.populate("createdBy", "name email");
 
     res.status(201).json({
       success: true,
@@ -171,6 +179,7 @@ const updateMemory = async (req, res, next) => {
     Object.assign(memory, req.body);
 
     await memory.save();
+    await memory.populate("createdBy", "name email");
 
     res.status(200).json({
       success: true,
@@ -216,6 +225,77 @@ const deleteMemory = async (req, res, next) => {
   }
 };
 
+// Remove a single image from a memory, keeping the memory and its text
+// intact. Only the memory creator may do this, matching the same
+// authorization rule used everywhere else on memories.
+const removeMemoryImage = async (req, res, next) => {
+  try {
+    const { id, filename } = req.params;
+
+    const memory = await Memory.findById(id);
+
+    if (!memory) {
+      return res.status(404).json({
+        success: false,
+        message: "Memory not found",
+      });
+    }
+
+    if (
+      memory.createdBy.toString() !==
+      req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Only the memory creator can remove images from this memory",
+      });
+    }
+
+    // path.basename strips any "../" or "/" segments, so a crafted
+    // filename can never point outside the uploads directory. If the
+    // request's filename doesn't survive that unchanged, it was never a
+    // plain filename to begin with - reject it instead of guessing.
+    const safeFileName = path.basename(filename || "");
+
+    if (!safeFileName || safeFileName !== filename) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid image filename",
+      });
+    }
+
+    const storedPath = `/uploads/${safeFileName}`;
+    const imageIndex = memory.images.indexOf(storedPath);
+
+    if (imageIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "This image does not belong to this memory",
+      });
+    }
+
+    memory.images.splice(imageIndex, 1);
+
+    await memory.save();
+    await memory.populate("createdBy", "name email");
+
+    // Remove the file from disk after the database update succeeds, so
+    // a failed save never leaves the Memory document pointing at a
+    // deleted file. A failure here is logged but never blocks the
+    // response - the document is already the source of truth.
+    await deleteLocalUploadedFiles([storedPath]);
+
+    res.status(200).json({
+      success: true,
+      message: "Image removed successfully",
+      memory,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Upload images to an existing memory.
 //
 // Authorization already ran in the authorizeMemoryImageUpload middleware
@@ -241,6 +321,7 @@ const uploadMemoryImages = async (req, res, next) => {
     memory.images.push(...imagePaths);
 
     await memory.save();
+    await memory.populate("createdBy", "name email");
 
     res.status(200).json({
       success: true,
@@ -264,4 +345,5 @@ module.exports = {
   uploadMemoryImages,
   updateMemory,
   deleteMemory,
+  removeMemoryImage,
 };
