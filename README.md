@@ -129,7 +129,7 @@ Neither `.env` file is committed — only the `.env.example` templates are, and 
 1. Register two accounts (or use one and imagine a second).
 2. Log in, create a trip from **My Trips → Create a trip**.
 3. Open the trip, copy its invite code (**Share trip**).
-4. Add a location to the trip (place name + address only — no coordinates).
+4. Add a location to the trip (full address + optional custom title — no coordinates).
 5. Open the location, add a text memory, then add another memory with photos.
 6. Log in as the second account, use **Join with invite code** on **My Trips**, paste the code.
 7. The second account can now see the trip, its locations, and its memories, and can add their own memory — but cannot edit or delete the first account's trip, locations, or memories (creator-only controls simply don't render for them).
@@ -156,6 +156,7 @@ All routes below except register/login require `Authorization: Bearer <token>`.
 | GET | `/api/locations/:locationId/memories` | List a location's memories |
 | GET / PUT / DELETE | `/api/memories/:id` | Read/update/delete a memory |
 | POST | `/api/memories/:id/images` | Upload up to 5 images to a memory |
+| DELETE | `/api/memories/:id/images/:filename` | Remove one uploaded image from a memory |
 
 The full request/response set (including negative-path examples like missing tokens and invalid data) is documented in `api-tests.rest` at the repo root — open it with the VS Code REST Client extension.
 
