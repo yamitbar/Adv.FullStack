@@ -49,10 +49,27 @@ app.use(
 // Parse incoming JSON requests
 app.use(express.json());
 
-// Serve uploaded files as static files
+// Serve uploaded files as static files.
+//
+// Helmet's default Cross-Origin-Resource-Policy ("same-origin") blocks
+// a page on one origin from loading a resource served by another origin
+// - which is exactly the client/server split here (client on 5173,
+// server on 3000 in development; two different domains in most
+// deployments too). Without this override, every memory/location image
+// <img> tag fails to load (shows as broken) even though the file exists
+// and the URL is correct, because the browser refuses the cross-origin
+// resource load. Scoped to just this static route so the rest of the
+// app keeps Helmet's stricter default.
 app.use(
   "/uploads",
-  express.static(path.join(__dirname, "uploads"))
+  express.static(path.join(__dirname, "uploads"), {
+    setHeaders: (res) => {
+      res.setHeader(
+        "Cross-Origin-Resource-Policy",
+        "cross-origin"
+      );
+    },
+  })
 );
 
 // Authentication and user routes

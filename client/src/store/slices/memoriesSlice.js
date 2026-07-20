@@ -84,14 +84,16 @@ export const uploadMemoryImages = createAsyncThunk(
         formData.append("images", file);
       });
 
+      // Do NOT set a Content-Type header here. When the request body is
+      // a FormData instance, the browser must compute the multipart
+      // boundary itself and put it in the Content-Type header - if we
+      // set "multipart/form-data" manually (without a boundary), the
+      // browser keeps our header as-is instead of adding one, and the
+      // request body becomes unparseable multipart data on the server.
+      // Axios already knows to leave FormData bodies alone.
       const { data } = await api.post(
         `/memories/${memoryId}/images`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        formData
       );
 
       return data.memory;
@@ -101,6 +103,28 @@ export const uploadMemoryImages = createAsyncThunk(
         message: getErrorMessage(
           error,
           "Failed to upload images"
+        ),
+      });
+    }
+  }
+);
+
+export const removeMemoryImage = createAsyncThunk(
+  "memories/removeMemoryImage",
+  async ({ memoryId, filename }, thunkAPI) => {
+    try {
+      const { data } = await api.delete(
+        `/memories/${memoryId}/images/${encodeURIComponent(filename)}`
+      );
+
+      return data.memory;
+    } catch (error) {
+      return thunkAPI.rejectWithValue({
+        memoryId,
+        filename,
+        message: getErrorMessage(
+          error,
+          "Failed to remove image"
         ),
       });
     }
@@ -163,6 +187,9 @@ const memoriesSlice = createSlice({
     uploadingMemoryId: null,
     uploadError: null,
 
+    removingImage: null,
+    removeImageError: null,
+
     updatingMemoryId: null,
     updateError: null,
 
@@ -186,6 +213,10 @@ const memoriesSlice = createSlice({
 
     clearUploadMemoryError: (state) => {
       state.uploadError = null;
+    },
+
+    clearRemoveImageError: (state) => {
+      state.removeImageError = null;
     },
 
     clearUpdateMemoryError: (state) => {
@@ -274,6 +305,41 @@ const memoriesSlice = createSlice({
         }
       )
 
+      .addCase(
+        removeMemoryImage.pending,
+        (state, action) => {
+          state.removingImage = {
+            memoryId: action.meta.arg.memoryId,
+            filename: action.meta.arg.filename,
+          };
+          state.removeImageError = null;
+        }
+      )
+
+      .addCase(
+        removeMemoryImage.fulfilled,
+        (state, action) => {
+          state.removingImage = null;
+
+          const index = state.items.findIndex(
+            (memory) =>
+              memory._id === action.payload._id
+          );
+
+          if (index !== -1) {
+            state.items[index] = action.payload;
+          }
+        }
+      )
+
+      .addCase(
+        removeMemoryImage.rejected,
+        (state, action) => {
+          state.removingImage = null;
+          state.removeImageError = action.payload;
+        }
+      )
+
       .addCase(updateMemory.pending, (state, action) => {
         state.updatingMemoryId =
           action.meta.arg.memoryId;
@@ -333,6 +399,7 @@ export const {
   clearMemories,
   clearCreateMemoryError,
   clearUploadMemoryError,
+  clearRemoveImageError,
   clearUpdateMemoryError,
   clearDeleteMemoryError,
 } = memoriesSlice.actions;
