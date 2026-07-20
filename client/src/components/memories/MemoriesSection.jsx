@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -60,8 +61,19 @@ function MemoriesSection({ locationId }) {
     };
   }, [dispatch, locationId]);
 
-  const previewUrls = selectedFiles.map((file) =>
-    URL.createObjectURL(file)
+  // Memoized so a blob URL is created exactly once per selected file,
+  // not on every render (e.g. every keystroke in the textarea below,
+  // which re-renders this component but does not change selectedFiles).
+  // Without this, each render created a fresh, never-revoked object URL
+  // for the same files, and the <img> could briefly point at a URL that
+  // was already revoked by an earlier render's cleanup - showing a
+  // broken image (its alt text) in place of the thumbnail.
+  const previewUrls = useMemo(
+    () =>
+      selectedFiles.map((file) =>
+        URL.createObjectURL(file)
+      ),
+    [selectedFiles]
   );
 
   useEffect(() => {
@@ -70,8 +82,7 @@ function MemoriesSection({ locationId }) {
         URL.revokeObjectURL(url)
       );
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFiles]);
+  }, [previewUrls]);
 
   const handlePickFiles = () => {
     fileInputRef.current?.click();
