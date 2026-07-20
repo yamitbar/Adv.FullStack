@@ -49,7 +49,7 @@ const createMemory = async (req, res, next) => {
     // creator's name immediately, instead of a bare ObjectId that only
     // becomes a name after a later fetch/refetch (see getMemoriesByLocation
     // and getMemoryById below, which already did this correctly).
-    await memory.populate("createdBy", "name email");
+    await memory.populate("createdBy", "name");
 
     res.status(201).json({
       success: true,
@@ -93,7 +93,7 @@ const getMemoriesByLocation = async (req, res, next) => {
     const memories = await Memory.find({
       location: locationId,
     })
-      .populate("createdBy", "name email")
+      .populate("createdBy", "name")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -110,7 +110,7 @@ const getMemoriesByLocation = async (req, res, next) => {
 const getMemoryById = async (req, res, next) => {
   try {
     const memory = await Memory.findById(req.params.id)
-      .populate("createdBy", "name email");
+      .populate("createdBy", "name");
 
     if (!memory) {
       return res.status(404).json({
@@ -179,7 +179,7 @@ const updateMemory = async (req, res, next) => {
     Object.assign(memory, req.body);
 
     await memory.save();
-    await memory.populate("createdBy", "name email");
+    await memory.populate("createdBy", "name");
 
     res.status(200).json({
       success: true,
@@ -278,7 +278,7 @@ const removeMemoryImage = async (req, res, next) => {
     memory.images.splice(imageIndex, 1);
 
     await memory.save();
-    await memory.populate("createdBy", "name email");
+    await memory.populate("createdBy", "name");
 
     // Remove the file from disk after the database update succeeds, so
     // a failed save never leaves the Memory document pointing at a
@@ -321,7 +321,7 @@ const uploadMemoryImages = async (req, res, next) => {
     memory.images.push(...imagePaths);
 
     await memory.save();
-    await memory.populate("createdBy", "name email");
+    await memory.populate("createdBy", "name");
 
     res.status(200).json({
       success: true,

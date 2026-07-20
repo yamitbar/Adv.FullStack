@@ -81,8 +81,9 @@ function MemoryCard({ memory }) {
   const isUploading = uploadingMemoryId === memory._id;
 
   const creatorName =
-    typeof memory.createdBy === "object"
-      ? memory.createdBy?.name
+    typeof memory.createdBy === "object" &&
+    memory.createdBy?.name
+      ? memory.createdBy.name
       : "A trip member";
 
   const wasEdited =
