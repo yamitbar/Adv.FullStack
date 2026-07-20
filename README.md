@@ -16,7 +16,7 @@ Built as a university full-stack final project on the MERN stack (MongoDB, Expre
 - Deleting a trip cascades to its locations, their memories, and any uploaded image files. Deleting a location cascades to its memories and their images.
 - Responsive UI across desktop and mobile viewports, with loading/empty/error states throughout.
 
-**Not included in this MVP** (explicitly out of scope): interactive maps, Google Places integration, weather, video memories, comments, notifications, profile statistics/pages, advanced sharing/permissions, and real-time features. A couple of internal placeholder routes for some of these (`/map`, `/profile`) still exist in the router but are not linked from anywhere in the app.
+**Not included in this MVP** (explicitly out of scope): interactive maps, Google Places integration, weather, video memories, comments, notifications, profile statistics/pages, advanced sharing/permissions, and real-time features. Earlier drafts had placeholder routes for some of these (`/map`, `/profile`); those have since been removed from the router entirely rather than left as unfinished pages.
 
 ## Tech stack
 
@@ -118,9 +118,9 @@ Neither `.env` file is committed — only the `.env.example` templates are, and 
 
 ## Authentication flow
 
-1. `POST /api/auth/register` creates a user with a bcrypt-hashed password and returns a JWT. The response never includes the password field (`select: false` on the schema, and it's excluded again explicitly in the controller).
-2. `POST /api/auth/login` verifies the password with bcrypt and returns a fresh JWT.
-3. The client stores the JWT in `localStorage` and attaches it as `Authorization: Bearer <token>` on every request via an Axios interceptor.
+1. `POST /api/auth/register` creates a user with a bcrypt-hashed password and returns the created user — **it does not return a JWT.** The response never includes the password field (`select: false` on the schema, and it's excluded again explicitly in the controller). After a successful registration, the frontend redirects to `/login` with a "You can now log in" message rather than logging the user in automatically.
+2. `POST /api/auth/login` verifies the password with bcrypt and returns the user together with a fresh JWT — this is the only endpoint that issues a token.
+3. The client stores that JWT in `localStorage` and attaches it as `Authorization: Bearer <token>` on every request via an Axios interceptor.
 4. Every non-auth route on the backend is wrapped in a `protect` middleware that verifies the JWT, loads the user, and rejects the request (401) if the token is missing, invalid, expired, or belongs to a user that no longer exists.
 5. On the frontend, `ProtectedRoute` reads `AuthContext` and redirects unauthenticated visitors to `/login` before rendering any trip/location/memory page. A 401 response from the API also clears the stored session and redirects to `/login`.
 
@@ -188,7 +188,7 @@ Both are active in the same happy path: `ProtectedRoute` and the navbar read `Au
 
 - Uploaded images are stored on local disk, which does not persist across Heroku dyno restarts/redeploys (see Uploads and media above).
 - No automated test suite (unit/integration tests) exists yet — verification has been manual/exploratory (see Testing section).
-- `/map` and `/profile` are unbuilt placeholder routes, intentionally unlinked from the app's navigation.
+- No map view or user profile/statistics page exists yet — see Future improvements.
 - No password-reset or email-verification flow.
 
 ## Future improvements
@@ -230,14 +230,10 @@ SPA fallback routing (so refreshing `/trips/:id` doesn't 404) is already configu
 
 ## Testing / manual verification
 
-There is no automated test suite. Verification has been performed by:
+There is no automated test suite. What follows is deliberately split into three categories, because they carry very different levels of confidence — do not read "runtime API verification" as the same thing as "browser QA passed."
 
-- Static checks: `node --check` on every backend file, `npm run lint` (oxlint) and `npm run build` (Vite) on the frontend.
-- Manual exploratory testing via `api-tests.rest` (REST Client) and clicking through the app in a browser against a real local MongoDB instance.
+**Runtime API verification (real database, real HTTP requests).** The project owner ran the requests in `api-tests.rest` against a real local MongoDB instance and a real running server, and reported 32/32 passing after fixing a genuine bug this uncovered: `server/middleware/upload.js` was missing `const path = require("path")`, so every image upload failed at runtime with `ReferenceError: path is not defined` — an error invisible to static syntax checks, only reachable by actually calling the upload endpoint. That fix is committed. This round of testing was performed locally by the project owner, not witnessed or independently reproduced inside this assistant's sandbox (which cannot reach a local MongoDB instance — see `docs/development-notes/batch-4-runtime-delivery-and-docs.md` for why).
 
-Run the manual happy-path test yourself before a live demo or submission:
+**Static verification (reproducible by anyone, anytime).** `node --check` on every backend file, `npm run lint` (oxlint), and `npm run build` (Vite) on the frontend. These pass as of the current commit.
 
-1. Register two accounts.
-2. Log in as the first, create a trip, add a location, add a text memory and a memory with photos, edit the trip, edit the location.
-3. Copy the invite code, log in as the second account, confirm you cannot see the trip yet, join with the code, confirm you now can — and that you don't see the first account's edit/delete controls.
-4. Delete a memory, then a location, then the trip, confirming each cascades correctly and the UI updates without a manual refresh.
+**Manual browser QA: started, not completed.** Clicking through the actual UI — Home, Register, Login, My Trips, Create Trip, Trip Details, Add Location, Location Details, and the 404 page, at both desktop and mobile widths — has not been fully verified end to end. It was started but not finished (interrupted by an environment usage limit). Use `MANUAL_TEST_PLAN.md` to finish this before a live demo or submission; it's the single highest-value remaining check, and the only category of verification above that can catch UI-only issues (broken layouts, dead buttons, console errors) that neither API tests nor static checks can see.

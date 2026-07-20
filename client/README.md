@@ -1,16 +1,23 @@
-# React + Vite
+# Pathly — client
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The React frontend for Pathly, a collaborative travel-memory journal. Built with React 19 and Vite, using React Router for routing, Redux Toolkit for trips/memories state, and React Context for authentication.
 
-Currently, two official plugins are available:
+The full project documentation — architecture, environment variables, API reference, authentication flow, deployment, and known limitations — lives in the [root README](../README.md). This file only covers the client itself.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Environment variable
 
-## React Compiler
+| Variable | Purpose |
+| --- | --- |
+| `VITE_API_URL` | Base URL of the backend API, including the `/api` prefix, e.g. `http://localhost:3000/api`. If unset, falls back to `http://localhost:3000/api` (see `src/services/api.js`). |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Copy `.env.example` to `.env` and adjust if your API isn't running on the default port.
 
-## Expanding the Oxlint configuration
+## Scripts
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```bash
+npm install     # install dependencies
+npm run dev      # start the Vite dev server (http://localhost:5173 by default)
+npm run build     # production build into dist/
+npm run lint       # oxlint
+npm run preview     # serve the production build locally
+```
