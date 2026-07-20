@@ -4,7 +4,7 @@ const { deleteMemoriesForLocation } = require("../utils/cascadeDelete");
 const { isTripMember } = require("../utils/tripMembership");
 
 // Create a new location inside a trip
-const createLocation = async (req, res) => {
+const createLocation = async (req, res, next) => {
   try {
     const { tripId } = req.params;
 
@@ -35,15 +35,12 @@ const createLocation = async (req, res) => {
       location,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    next(error);
   }
 };
 
 // Get all locations inside a specific trip
-const getLocationsByTrip = async (req, res) => {
+const getLocationsByTrip = async (req, res, next) => {
   try {
     const { tripId } = req.params;
 
@@ -75,15 +72,12 @@ const getLocationsByTrip = async (req, res) => {
       locations,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    next(error);
   }
 };
 
 // Get a single location by ID
-const getLocationById = async (req, res) => {
+const getLocationById = async (req, res, next) => {
   try {
     const location = await Location.findById(req.params.id)
       .populate("createdBy", "name email");
@@ -116,15 +110,12 @@ const getLocationById = async (req, res) => {
       location,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    next(error);
   }
 };
 
 // Update a location
-const updateLocation = async (req, res) => {
+const updateLocation = async (req, res, next) => {
   try {
     const location = await Location.findById(req.params.id);
 
@@ -155,10 +146,7 @@ const updateLocation = async (req, res) => {
       location: updatedLocation,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    next(error);
   }
 };
 

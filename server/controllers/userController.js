@@ -8,7 +8,7 @@ const canManageUser = (authenticatedUser, requestedUserId) => {
 };
 
 // Get all users
-const getUsers = async (req, res) => {
+const getUsers = async (req, res, next) => {
   try {
     if (req.user.role !== "admin") {
       return res.status(403).json({
@@ -26,15 +26,12 @@ const getUsers = async (req, res) => {
       users,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
 
 // Get a single user by id
-const getUserById = async (req, res) => {
+const getUserById = async (req, res, next) => {
   try {
     if (!canManageUser(req.user, req.params.id)) {
       return res.status(403).json({
@@ -59,15 +56,12 @@ const getUserById = async (req, res) => {
       user,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
 
 // Update a user by id
-const updateUser = async (req, res) => {
+const updateUser = async (req, res, next) => {
   try {
     if (!canManageUser(req.user, req.params.id)) {
       return res.status(403).json({
@@ -127,15 +121,12 @@ const updateUser = async (req, res) => {
       user,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
 
 // Delete a user by id
-const deleteUser = async (req, res) => {
+const deleteUser = async (req, res, next) => {
   try {
     if (!canManageUser(req.user, req.params.id)) {
       return res.status(403).json({
@@ -160,10 +151,7 @@ const deleteUser = async (req, res) => {
       message: "User deleted successfully",
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
 

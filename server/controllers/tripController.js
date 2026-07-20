@@ -10,7 +10,7 @@ const hasInvalidDateRange = (startDate, endDate) => {
 };
 
 // Create a new trip
-const createTrip = async (req, res) => {
+const createTrip = async (req, res, next) => {
   try {
     const {
       title,
@@ -37,17 +37,14 @@ const createTrip = async (req, res) => {
       message: "Trip created successfully",
       trip,
     });
-  } 
+  }
   catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
 
 // Get all trips related to the logged-in user
-const getTrips = async (req, res) => {
+const getTrips = async (req, res, next) => {
   try {
     const trips = await Trip.find({
       $or: [
@@ -61,15 +58,12 @@ const getTrips = async (req, res) => {
       trips,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    next(error);
   }
 };
 
 // Get a single trip by ID
-const getTripById = async (req, res) => {
+const getTripById = async (req, res, next) => {
   try {
     const trip = await Trip.findOne({
       _id: req.params.id,
@@ -91,15 +85,12 @@ const getTripById = async (req, res) => {
       trip,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    next(error);
   }
 };
 
 // Update a trip by ID
-const updateTrip = async (req, res) => {
+const updateTrip = async (req, res, next) => {
   try {
     const trip = await Trip.findOne({
       _id: req.params.id,
@@ -138,10 +129,7 @@ const updateTrip = async (req, res) => {
       trip,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    next(error);
   }
 };
 
@@ -171,7 +159,7 @@ const deleteTrip = async (req, res, next) => {
 };
 
 // Join a trip using an invite code
-const joinTrip = async (req, res) => {
+const joinTrip = async (req, res, next) => {
   try {
     const { inviteCode } = req.body;
 
@@ -204,10 +192,7 @@ const joinTrip = async (req, res) => {
       trip,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    next(error);
   }
 };
 
