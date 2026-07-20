@@ -946,7 +946,6 @@ img {
   letter-spacing: -0.055em;
 }
 
-.placeholder-page,
 .not-found-page {
   min-height: 760px;
   display: grid;
@@ -961,7 +960,6 @@ img {
     var(--sand-50);
 }
 
-.placeholder-card,
 .not-found-content {
   width: min(100%, 650px);
   padding: 55px;
@@ -972,7 +970,6 @@ img {
   text-align: center;
 }
 
-.placeholder-icon,
 .not-found-icon {
   width: 66px;
   height: 66px;
@@ -985,14 +982,12 @@ img {
   background: var(--forest-100);
 }
 
-.placeholder-card h1,
 .not-found-content h1 {
   margin: 13px 0;
   font-size: clamp(2rem, 5vw, 3.7rem);
   letter-spacing: -0.055em;
 }
 
-.placeholder-card p,
 .not-found-content p {
   margin: 0 auto 28px;
   color: var(--text-soft);
@@ -1217,7 +1212,6 @@ img {
     padding: 65px 0 35px;
   }
 
-  .placeholder-card,
   .not-found-content {
     padding: 40px 22px;
   }

@@ -47,10 +47,6 @@ const NotFound = lazy(() =>
   import("./pages/NotFound")
 );
 
-const PlaceholderPage = lazy(() =>
-  import("./pages/PlaceholderPage")
-);
-
 function PageLoader() {
   return (
     <div className="page-loader">
@@ -115,29 +111,6 @@ function App() {
             }
           />
 
-          <Route
-            path="/map"
-            element={
-              <ProtectedRoute>
-                <PlaceholderPage
-                  title="Interactive Map"
-                  description="Trips and locations will soon appear here on the interactive map."
-                />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <PlaceholderPage
-                  title="Your Profile"
-                  description="Your profile, travel preferences and journey statistics will appear here."
-                />
-              </ProtectedRoute>
-            }
-          />
         </Route>
 
         <Route
