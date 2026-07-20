@@ -1,0 +1,38 @@
+# Pathly — Course Requirements Evidence Table
+
+Concise reference for the oral defense: for each mandatory requirement, the exact file(s) and component/controller/middleware that satisfy it, verified by direct code reading against the current repository state.
+
+| Requirement | File(s) | Component / Controller / Middleware | Explanation |
+| --- | --- | --- | --- |
+| Node.js | `server/package.json`, `server/server.js` | — | `engines.node: ">=18.0.0"`; the app is a plain Node/CommonJS server entered via `node server.js`. |
+| Express | `server/app.js` | Express app instance | Express `^5.2.1` builds the app, mounts all routers, and registers the global error handler. |
+| REST CRUD | `server/routes/*.js`, `server/controllers/*.js` | `tripController`, `locationController`, `memoryController`, `userController` | Every resource (User, Trip, Location, Memory) has full Create/Read/Update/Delete exposed as REST routes under `/api`. |
+| MongoDB / Mongoose | `server/config/db.js`, `server/models/*.js` | `connectDB()` | Mongoose `^9.6.2` connects to `MONGO_URI`; the server refuses to accept requests until the connection succeeds. |
+| ObjectId relationships | `server/models/{Trip,Location,Memory}.js` | Mongoose schemas | `Location.trip → Trip`, `Location.createdBy → User`, `Memory.location → Location`, `Memory.createdBy → User`, `Trip.createdBy` / `Trip.participants → User`, all as `mongoose.Schema.Types.ObjectId` refs. |
+| Joi validation | `server/validation/*.js`, `server/middleware/validate.js` | `validate(schema)` middleware | Every write route runs its body through a Joi schema with `stripUnknown: true`, so unexpected fields (e.g. a spoofed `role`) are silently dropped, not trusted. |
+| Middleware (general) | `server/middleware/*.js` | `authMiddleware`, `validate`, `upload`, `errorHandler`, `rateLimiter`, `memoryAuth` | Distinct middleware for auth, validation, file upload, error handling, rate limiting, and upload-specific authorization. |
+| Global error handler | `server/middleware/errorHandler.js`, `server/app.js` | `errorHandler` | Registered last in `app.js`; normalizes Mongoose `CastError`/`ValidationError`, duplicate-key (11000), JWT errors, and Multer errors into one `{ success, message }` shape. |
+| Register / Login | `server/controllers/authController.js`, `server/routes/authRoutes.js` | `register`, `login` | `POST /api/auth/register` creates a user and returns it (no token); `POST /api/auth/login` is the only endpoint that issues a JWT. |
+| bcrypt | `server/models/User.js` | `userSchema.pre("save", ...)` | Password hashed with `bcrypt.hash(password, 10)` before every save where it changed; compared with `bcrypt.compare` at login. |
+| JWT | `server/utils/generateToken.js`, `server/middleware/authMiddleware.js` | `generateToken`, `protect` | Token issued on login (`jsonwebtoken`), verified on every protected request via `jwt.verify`. |
+| Protected backend routes | `server/middleware/authMiddleware.js`, all `server/routes/*.js` | `protect` | Every route except register/login requires a valid `Authorization: Bearer <token>` header, enforced per-route. |
+| Protected frontend routes | `client/src/components/common/ProtectedRoute.jsx` | `ProtectedRoute` | Wraps every trip/location page in `App.jsx`; redirects unauthenticated visitors to `/login` before rendering. |
+| React SPA | `client/src/App.jsx`, `client/src/main.jsx` | `App`, `BrowserRouter` | Single-page app built with Vite + React 19, client-side routed. |
+| useState | `client/src/context/AuthContext.jsx` and throughout `pages/`/`components/` | e.g. `AuthProvider` | Local component/form state (auth session, forms, edit modes, loading flags) throughout the app. |
+| useEffect | `client/src/context/AuthContext.jsx`, `client/src/pages/*.jsx` | e.g. session-restore effect in `AuthProvider`, data-fetch effects in `TripDetails`/`LocationDetails` | Side effects for session restoration on load and data fetching on route/param change. |
+| Axios | `client/src/services/api.js` | Configured `axios` instance | Single shared instance with a request interceptor (attaches JWT) and a response interceptor (handles 401 by clearing session). |
+| Context API | `client/src/context/AuthContext.jsx` | `AuthContext`, `AuthProvider`, `useAuth` | Owns authentication state (user, token, login/register/logout) app-wide, independent of Redux. |
+| Redux Toolkit | `client/src/store/store.js`, `client/src/store/slices/{tripsSlice,memoriesSlice}.js` | `tripsSlice`, `memoriesSlice` | Owns trip/memory domain data via `createSlice`/`createAsyncThunk`, each with independent per-operation loading/error state. |
+| Multer | `server/middleware/upload.js`, `server/routes/memoryRoutes.js` | `uploadImages` | Disk storage, MIME-type filter (JPEG/PNG/WebP only), 5MB/5-file limits, unique generated filenames. |
+| Dynamic image display | `client/src/services/api.js`, `client/src/components/memories/MemoryCard.jsx` | `resolveMediaUrl()` | Every uploaded image URL is built from the stored relative path plus the API's origin at render time — never hardcoded, works in dev and production alike. |
+| React.lazy | `client/src/App.jsx` | `lazy(() => import(...))` | Every routed page component is lazy-loaded. |
+| Suspense | `client/src/App.jsx` | `<Suspense fallback={<PageLoader />}>` | Wraps the entire route tree, showing a loader while a lazy page chunk loads. |
+| React.memo | `client/src/components/trips/{TripCard,LocationCard}.jsx`, `client/src/components/memories/MemoryCard.jsx` | `memo(TripCard)`, `memo(LocationCard)`, `memo(MemoryCard)` | The three list-rendered card components are memoized to avoid unnecessary re-renders in trip/location/memory lists. |
+| Loading / error / empty states | `client/src/pages/{MyTrips,TripDetails,LocationDetails}.jsx`, `client/src/components/memories/MemoriesSection.jsx` | e.g. `.loader-spinner`, `*-error-state`, `*-empty-state` blocks | Every data-driven list/page renders a distinct loading spinner, error block with retry, and empty state with a call to action. |
+| Deployment configuration | `server/Procfile`, `server/package.json` (`engines`), `client/vercel.json`, `client/public/_redirects`, both `.env.example` files | — | Heroku process declaration and Node engine pin for the backend; Vercel rewrite and Netlify `_redirects` for SPA fallback routing on the frontend. Not yet deployed — configuration only. |
+
+## Notes for the defense
+
+- Authorization (as distinct from authentication) is enforced per-resource beyond the table above: trip membership is required to read a trip's locations/memories (`server/utils/tripMembership.js`), and only a resource's own creator can edit/delete it — checked inline in every relevant controller.
+- Cascade delete (`server/utils/cascadeDelete.js`, `server/utils/mediaCleanup.js`) removes a trip's locations and their memories, and a location's memories, along with any locally uploaded image files — not just the database records.
+- No automated test suite exists (Jest/Supertest or Vitest/RTL). Verification to date is manual: 32 API requests executed by hand via `api-tests.rest`, plus static checks (`node --check`, lint, build) run repeatedly across every batch. Manual browser QA is still pending — see the root README's Testing section for the exact, current wording.
