@@ -30,6 +30,26 @@ Trip and memory data is fetched, created, updated, and deleted from multiple pla
 
 Two layers. Backend: every route except register/login/health goes through the `protect` middleware, which is where the actual security boundary is — the frontend gate is a UX convenience, not the real enforcement. Frontend: `ProtectedRoute.jsx` reads `AuthContext` and redirects unauthenticated visitors to `/login` before rendering a trip/location page, so there's no flash of protected content.
 
+## What does Helmet protect against?
+
+Helmet sets a collection of HTTP response headers that close off classes of attack browsers otherwise leave open by default - things like clickjacking (framing the site in a hidden iframe to trick clicks), MIME-sniffing (a browser guessing a file's type and executing something as script that shouldn't be), and missing transport security (allowing a downgrade to plain HTTP). It's defense-in-depth: it doesn't replace input validation or auth, it reduces what a browser will let a malicious page do to a user visiting Pathly. The one place Pathly needed to *loosen* a Helmet default rather than just accept it: `Cross-Origin-Resource-Policy` defaults to `same-origin`, which would block the frontend (a different origin) from loading images off `/uploads` on the backend - that route specifically overrides it to `cross-origin`.
+
+## Why use rate limiting?
+
+It slows down automated abuse - most concretely, credential brute-forcing against `/api/auth/login` (repeatedly guessing passwords) and spam account creation against `/api/auth/register`. Without it, both endpoints would accept requests as fast as an attacker's script could send them. `express-rate-limit` tracks requests per IP within a time window and returns 429 with a JSON body once the limit is hit, rather than silently allowing unlimited attempts.
+
+## Why is the auth limiter stricter?
+
+`/api/auth/login` and `/api/auth/register` are the two endpoints where rate limiting actually matters for security - everywhere else on `/api`, the general limiter exists mainly to prevent runaway/misbehaving clients from hammering the server, not to stop a targeted attack. A password-guessing script only needs `POST /api/auth/login` fast and repeatedly; the general 100-requests/15-minutes limit would still allow far too many guesses. The dedicated `authLimiter` caps just those two routes at a much lower 10 requests/15 minutes in production, while leaving normal browsing (loading trips, locations, the map) under the more generous general limit.
+
+## What is the difference between a backend global error handler and a React Error Boundary?
+
+They catch different kinds of failure in different places. The backend's `errorHandler` (`server/middleware/errorHandler.js`) catches errors thrown or passed to `next()` during an Express request - a bad Mongo query, a validation failure, a JWT error - and turns them into a consistent JSON `{ success, message }` response; it never touches the frontend. The frontend's `ErrorBoundary` (`client/src/components/common/ErrorBoundary.jsx`) catches unexpected errors thrown while React is rendering the UI itself - a bug in a component, not a failed API call - and shows a fallback screen instead of a blank white page. A failed API call is handled by neither of these directly: it's caught by the calling component's own try/catch and shown as one of the existing per-page error states (e.g. `TripDetails`'s `.trip-error-state`), which is deliberately separate from both - an expected, recoverable failure shouldn't tear down the whole page the way an Error Boundary's fallback does.
+
+## What happens when a user enters an unknown route?
+
+React Router's final `<Route path="*">` in `App.jsx` catches anything that didn't match an earlier route and renders `NotFound.jsx` - a styled "this path leads nowhere" page with a link back to Home, plus a My Trips shortcut if the visitor is already logged in. This works identically whether the visitor is authenticated or not, and for both a typo'd URL and a link to something that used to exist (like the old `/profile` placeholder) - it never exposes routing internals or a stack trace.
+
 ## How does Joi validation work?
 
 Each resource has a Joi schema file (`server/validation/*.js`) describing exactly which fields are allowed, required, and what shape they must be. A shared `validate(schema)` middleware runs the request body through `schema.validate(req.body, { abortEarly: false, stripUnknown: true })` before the controller ever sees it — `stripUnknown` means an unexpected field (like a client trying to send `role: "admin"` or raw `lat`/`lng`) is silently dropped, not rejected or trusted.

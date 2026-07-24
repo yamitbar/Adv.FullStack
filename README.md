@@ -206,9 +206,16 @@ Both are active in the same happy path: `ProtectedRoute` and the navbar read `Au
 - JWT-based auth on every protected route; `protect` middleware rejects missing/invalid/expired tokens and tokens for deleted users.
 - All request bodies validated with Joi (`stripUnknown: true`), so unexpected fields (like a spoofed `role` or raw coordinates) are silently dropped rather than trusted.
 - Authorization checked on every read and write, not just writes — trip membership is required to view a trip's locations/memories, and only a resource's own creator can edit or delete it.
-- `helmet` for standard security headers, `express-rate-limit` on `/api` generally and more strictly on `/api/auth/login` and `/api/auth/register`.
+- `helmet` (`server/app.js`) sets standard security headers (e.g. `X-Content-Type-Options`, `X-Frame-Options`/frame-ancestors via CSP, `Strict-Transport-Security`) on every response. The `/uploads` static route specifically overrides Helmet's default `Cross-Origin-Resource-Policy` (`same-origin`) to `cross-origin`, since uploaded images are legitimately requested from a different origin (the deployed frontend) than the one serving them — without that override every memory/location image would fail to load.
+- `express-rate-limit` (`server/middleware/rateLimiter.js`) applies a general limiter to all of `/api` (100 requests/15 min in production, a much looser 1000/15 min in development so normal manual QA and map/location loading never trips it) and a stricter, dedicated limiter on `POST /api/auth/login` and `POST /api/auth/register` specifically (10 requests/15 min in production) to slow down credential brute-forcing. Both return a consistent `{ success: false, message }` JSON body, not an HTML error page, and don't apply to `GET /api/auth/me`.
 - File uploads restricted by MIME type, size, and count; upload authorization runs *before* Multer writes anything to disk.
 - Secrets (`JWT_SECRET`, `MONGO_URI`) live only in untracked `.env` files; `.gitignore` excludes `.env`, `uploads/`, `node_modules/`, and `dist/`.
+
+## Frontend resilience
+
+- **404 page** (`client/src/pages/NotFound.jsx`): any URL that doesn't match a real route falls through to a final wildcard (`path="*"`) route in `App.jsx`, showing a friendly "this path leads nowhere" message with a way back to Home, plus a My Trips shortcut if already logged in — never a blank page or a raw router error.
+- **Error Boundary** (`client/src/components/common/ErrorBoundary.jsx`), mounted around `<App />` in `main.jsx`: catches unexpected React rendering errors anywhere in the tree and shows a friendly fallback (with a way back to Home or to reload) instead of a blank white screen. This is a different safety net from the per-page loading/error/empty states used throughout the app (e.g. in `MyTrips`, `TripDetails`, `LocationDetails`) — those handle expected, recoverable API failures without ever unmounting the page; the Error Boundary only fires for a genuine unexpected JavaScript error during rendering, which those states can't catch.
+- **`useBodyScrollLock`** (`client/src/hooks/useBodyScrollLock.js`): a small custom hook, extracted from `ImageLightbox`, that locks page scrolling while a full-screen overlay is open and restores it afterward.
 
 ## Known limitations
 
