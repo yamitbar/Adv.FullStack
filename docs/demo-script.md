@@ -19,7 +19,7 @@ Open the trip, click **Edit trip**, change the title or description, save. Point
 Click **Share trip** — the invite code is copied to the clipboard (button label briefly confirms "Invite code copied"). This is the code a second user pastes to join.
 
 **5. Add a location** (~30s)
-Click **Add location**. Note the form only asks for a full address (required) and an optional custom title — no map, no coordinates, no place lookup. Submit.
+Click **Add location**. Start typing a full address (required) and pick one of Google's suggestions — this silently captures the place's coordinates and Place ID behind the scenes, but there's still no map or visible place lookup UI (that's the next phase). Optionally add a custom title. Submit.
 
 **6. Add a text memory** (~30s)
 Open the location, type a memory in the **Add a memory** box, save. Point out the creator's name appears immediately next to the memory — no refresh required.

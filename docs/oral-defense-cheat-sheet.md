@@ -60,11 +60,11 @@ Deleting a trip (`tripController.deleteTrip`) calls `deleteLocationsForTrip`, wh
 
 ## Why are coordinates/placeName/googlePlaceId internal, not user-facing?
 
-They exist in the `Location` schema (kept optional, not removed, for backward compatibility with any existing data) but were never wired to a real data source — there's no Google Places integration, so there was no honest way to collect real coordinates or a verified place name from the user. Rather than fake that data or make the user manually type coordinates, the MVP asks for exactly what a person can reliably type themselves: a free-text address and an optional custom title.
+As of this phase, they're populated by Google Places autocomplete when the user selects a suggested address (`client/src/components/locations/GoogleAddressAutocomplete.jsx`), but there's still no UI that renders them — no map page exists yet to show a pin, so displaying raw coordinates or a Place ID to the user would just be noise with no purpose. They stay internal for now and are kept optional in the `Location` schema so older records created before this phase (which have none of this data) remain valid.
 
 ## Why were maps/video/profile descoped?
 
-Time and scope, stated plainly: each is a real feature (map rendering, video storage/transcoding, a profile/statistics page) that would need its own data source, UI, and testing pass, and none of them are required to demonstrate the core MERN skills this project is graded on (full CRUD, auth, authorization, relationships, file upload, React state management). Early drafts had placeholder `/map` and `/profile` routes; those were removed entirely rather than left as unfinished pages, so nothing in the shipped app claims a feature that doesn't exist.
+Video and a profile/statistics page remain out of scope for time and grading-relevance reasons: each needs its own data source, UI, and testing pass, and neither is required to demonstrate the core MERN skills this project is graded on (full CRUD, auth, authorization, relationships, file upload, React state management). Maps are different — they were never permanently descoped, only deferred, and are now being restored in phases: this phase adds Google Places address autocomplete and stores coordinates; the actual map page with markers is the next phase. Early drafts had a placeholder `/map` route with no real functionality; that placeholder was removed entirely, and this phased rebuild is what replaces it. The `/profile` placeholder route was also removed and stays out of scope.
 
 ## What are the current limitations?
 
@@ -72,4 +72,4 @@ No automated test suite (verification is manual: `api-tests.rest` plus static ch
 
 ## What would be improved with more time?
 
-Automated backend (Jest/Supertest) and frontend (Vitest/RTL) tests; moving uploaded images to persistent object storage (S3-compatible) so they survive redeploys; pagination for trips/locations/memories as data grows; and, if genuinely in scope for a later version, a real map view backed by an actual geocoding/places API rather than free-text address entry.
+Automated backend (Jest/Supertest) and frontend (Vitest/RTL) tests; moving uploaded images to persistent object storage (S3-compatible) so they survive redeploys; pagination for trips/locations/memories as data grows; and the next phase already planned for this project — a real map page rendering markers from the coordinates now being captured by Google Places autocomplete.

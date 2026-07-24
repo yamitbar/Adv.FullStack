@@ -9,14 +9,16 @@ Built as a university full-stack final project on the MERN stack (MongoDB, Expre
 - Email/password registration and login, with a JWT-protected session.
 - Create, view, edit, and delete trips.
 - Invite other registered users to a trip with a short invite code; joined users become trip participants.
-- Create, view, edit, and delete locations within a trip (full address, visit date, optional custom title and cover image — no map coordinates or place metadata are collected or shown).
+- Create, view, edit, and delete locations within a trip (full address, visit date, optional custom title and cover image). The address field uses Google Places autocomplete: selecting a suggested address automatically captures its place name, coordinates, and Google Place ID behind the scenes — the user never sees or enters these directly, and they aren't rendered anywhere in the UI yet, but they're stored for the map page described below.
 - Create, view, edit, and delete text memories attached to a location.
 - Upload one or more photos to a memory (JPEG/PNG/WebP, up to 5 images per request, 5MB each).
 - Authorization enforced at every read/write endpoint: only a trip's creator and participants can see or modify its locations and memories; only a memory's/location's own creator can edit or delete it.
 - Deleting a trip cascades to its locations, their memories, and any uploaded image files. Deleting a location cascades to its memories and their images.
 - Responsive UI across desktop and mobile viewports, with loading/empty/error states throughout.
 
-**Not included in this MVP** (explicitly out of scope): interactive maps, Google Places integration, weather, video memories, comments, notifications, profile statistics/pages, advanced sharing/permissions, and real-time features. Earlier drafts had placeholder routes for some of these (`/map`, `/profile`); those have since been removed from the router entirely rather than left as unfinished pages.
+**Map integration is being restored in phases, not descoped.** Phase 1 (current) adds Google Places address autocomplete and stores each location's coordinates and Google Place ID. The visual map page itself — a `/map` route rendering markers for a trip's locations — is planned for the next phase and does not exist yet. Earlier project drafts had a placeholder `/map` route with no real functionality; that placeholder has been removed from the router, and this phased rebuild replaces it with an actually-functional foundation instead.
+
+**Not included in this MVP** (explicitly out of scope): the visual map page and markers (next phase, see above), weather, video memories, comments, notifications, profile statistics/pages, advanced sharing/permissions, and real-time features. The `/profile` placeholder route mentioned in earlier drafts has also been removed from the router entirely rather than left as an unfinished page.
 
 ## Tech stack
 
@@ -113,8 +115,21 @@ npm run preview           # serve the production build locally
 | Variable | Purpose |
 | --- | --- |
 | `VITE_API_URL` | Base URL of the backend API, including the `/api` prefix, e.g. `http://localhost:3000/api`. If unset, the client falls back to `http://localhost:3000/api` (see `client/src/services/api.js`). |
+| `VITE_GOOGLE_MAPS_API_KEY` | Google Maps Platform browser API key, used for the Places address-autocomplete field on Add/Edit Location (and, in a later phase, the map page). If unset, the address field still works as a plain text input — no autocomplete suggestions are offered, and no coordinates are captured — see Google Maps Platform setup below. |
 
 Neither `.env` file is committed — only the `.env.example` templates are, and they contain no real secrets.
+
+### Google Maps Platform setup
+
+The address field on Add/Edit Location uses Google's Places Autocomplete widget (via `@vis.gl/react-google-maps`). To enable it locally:
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/), create or select a project, then enable **both** the **Maps JavaScript API** and the **Places API** for it.
+2. Under **APIs & Services → Credentials**, create an API key and restrict it to a **browser key** (HTTP referrers), scoped to your local dev origin (e.g. `http://localhost:5173/*`) and, later, your deployed frontend origin.
+3. Add the key to `client/.env` as `VITE_GOOGLE_MAPS_API_KEY=your_key_here` (copy from `client/.env.example` first if you haven't already).
+4. Restart the Vite dev server (`npm run dev`) — Vite only reads `.env` values at startup, so a running dev server won't pick up a newly added key.
+5. Google Cloud may require billing to be enabled on the project for the Places API to return results, even within the free usage tier — if autocomplete suggestions don't appear, check the browser console and the Google Cloud Console's API usage/billing pages first.
+
+Without a configured key, Add/Edit Location still works exactly as before this phase: the address field falls back to a plain text input, and no coordinates or place metadata are saved.
 
 ## Authentication flow
 
@@ -129,7 +144,7 @@ Neither `.env` file is committed — only the `.env.example` templates are, and 
 1. Register two accounts (or use one and imagine a second).
 2. Log in, create a trip from **My Trips → Create a trip**.
 3. Open the trip, copy its invite code (**Share trip**).
-4. Add a location to the trip (full address + optional custom title — no coordinates).
+4. Add a location to the trip (start typing the full address, select one of Google's suggestions, optionally add a custom title).
 5. Open the location, add a text memory, then add another memory with photos.
 6. Log in as the second account, use **Join with invite code** on **My Trips**, paste the code.
 7. The second account can now see the trip, its locations, and its memories, and can add their own memory — but cannot edit or delete the first account's trip, locations, or memories (creator-only controls simply don't render for them).
@@ -189,13 +204,14 @@ Both are active in the same happy path: `ProtectedRoute` and the navbar read `Au
 
 - Uploaded images are stored on local disk, which does not persist across Heroku dyno restarts/redeploys (see Uploads and media above).
 - No automated test suite (unit/integration tests) exists yet — verification has been manual/exploratory (see Testing section).
-- No map view, Google Places integration, video memories, comments, notifications, or user profile/statistics page — these were intentionally descoped for this MVP (see MVP feature list above), not partially built or pending.
+- No visual map page or markers yet — Phase 1 (this codebase) added Google Places address autocomplete and stores coordinates/Place IDs, but the map page that renders them is planned for the next phase and does not exist yet.
+- No video memories, comments, notifications, or user profile/statistics page — these were intentionally descoped for this MVP (see MVP feature list above), not partially built or pending.
 - No password-reset or email-verification flow.
 
 ## Future improvements
 
 - Move uploaded images to persistent object storage (e.g. S3-compatible bucket) so they survive redeploys.
-- Add a map view and a profile/statistics page (out of scope for this MVP; see Known limitations).
+- Build the visual map page and markers (next phase — coordinates are already being captured, see Google Maps Platform setup above) and a profile/statistics page (out of scope for this MVP; see Known limitations).
 - Add automated backend (Jest/Supertest) and frontend (Vitest/RTL) tests.
 - Add pagination for trips/locations/memories lists as data volume grows.
 
