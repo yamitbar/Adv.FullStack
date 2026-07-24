@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
+import useBodyScrollLock from "../../hooks/useBodyScrollLock";
+
 import "./ImageLightbox.css";
 
 /**
@@ -20,14 +22,12 @@ function ImageLightbox({ src, alt, onClose }) {
   const closeButtonRef = useRef(null);
   const previouslyFocusedRef = useRef(null);
 
+  useBodyScrollLock();
+
   useEffect(() => {
     previouslyFocusedRef.current =
       document.activeElement;
     closeButtonRef.current?.focus();
-
-    const previousOverflow =
-      document.body.style.overflow;
-    document.body.style.overflow = "hidden";
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
@@ -41,8 +41,6 @@ function ImageLightbox({ src, alt, onClose }) {
     );
 
     return () => {
-      document.body.style.overflow =
-        previousOverflow;
       document.removeEventListener(
         "keydown",
         handleKeyDown
