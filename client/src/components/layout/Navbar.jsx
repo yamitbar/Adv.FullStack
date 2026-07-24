@@ -10,12 +10,11 @@ import {
 import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
-// The primary demo navigation only lists finished MVP destinations.
-// /map and /profile still exist as routes (see App.jsx) but are
-// intentionally not linked from anywhere in the main flow yet.
+// /profile has no route (see App.jsx) and stays out of the nav.
 const navigationItems = [
   { label: "Home", path: "/" },
   { label: "My Trips", path: "/trips" },
+  { label: "Map", path: "/map" },
 ];
 
 function Navbar() {

@@ -442,6 +442,14 @@ function TripDetails() {
                 : "Share trip"}
             </button>
 
+            <Link
+              to={`/map?trip=${tripId}`}
+              className="button trip-share-button"
+            >
+              <Map size={18} />
+              View on map
+            </Link>
+
             {isCreator && (
               <>
                 <button

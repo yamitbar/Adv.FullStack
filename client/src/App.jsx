@@ -44,6 +44,10 @@ const LocationDetails = lazy(() =>
   import("./pages/LocationDetails")
 );
 
+const MapPage = lazy(() =>
+  import("./pages/Map")
+);
+
 const NotFound = lazy(() =>
   import("./pages/NotFound")
 );
@@ -111,6 +115,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <LocationDetails />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/map"
+              element={
+                <ProtectedRoute>
+                  <MapPage />
                 </ProtectedRoute>
               }
             />
