@@ -11,6 +11,12 @@
 @memoryId = REPLACE_WITH_MEMORY_ID
 @inviteCode = REPLACE_WITH_INVITE_CODE
 @userId = REPLACE_WITH_USER_ID
+@imageFilename = REPLACE_WITH_AN_UPLOADED_IMAGE_FILENAME
+
+### Syntactically valid ObjectId that is guaranteed not to exist in any
+### real database - used only for the "not found" examples below, not
+### a captured id from any real document.
+@nonExistentId = 000000000000000000000000
 
 ############ AUTH ############
 
@@ -116,6 +122,22 @@ Content-Type: application/json
   "visitedAt": "2026-08-08"
 }
 
+### Create location with geocoded fields (after selecting a Geoapify
+### suggestion in the UI - lat/lng/placeId are captured automatically
+### by AddressAutocomplete, never typed by the user directly)
+POST {{baseUrl}}/trips/{{tripId}}/locations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "South Rim Overlook",
+  "address": "Grand Canyon National Park, Arizona, USA",
+  "lat": 36.0544,
+  "lng": -112.1401,
+  "placeId": "REPLACE_WITH_A_GEOAPIFY_PLACE_ID",
+  "visitedAt": "2026-08-08"
+}
+
 ### Get locations for a trip
 GET {{baseUrl}}/trips/{{tripId}}/locations
 Authorization: Bearer {{token}}
@@ -184,12 +206,47 @@ Content-Type: image/jpeg
 < ./sample-2.jpg
 --PathlyBoundary--
 
+### Remove a single image from a memory (expect the memory back with
+### that filename no longer in its images array; the memory itself is
+### not deleted)
+DELETE {{baseUrl}}/memories/{{memoryId}}/images/{{imageFilename}}
+Authorization: Bearer {{token}}
+
 ### Delete memory
 DELETE {{baseUrl}}/memories/{{memoryId}}
 Authorization: Bearer {{token}}
 
-############ MISC ############
+############ AUTHORIZATION / ERROR CASES ############
 
-### Invalid route (expect 404)
+### Missing token: see "Get trips without a token" under USERS above
+### (expect 401)
+
+### Forbidden: a non-creator tries to update someone else's trip
+### (expect 403 - {{otherToken}} must belong to a user who is NOT the
+### trip's creator and not a participant, e.g. before they've joined)
+PUT {{baseUrl}}/trips/{{tripId}}
+Authorization: Bearer {{otherToken}}
+Content-Type: application/json
+
+{
+  "title": "Attempted unauthorized edit"
+}
+
+### Invalid body: create a trip without the required fields (expect
+### 400 with a Joi validation message)
+POST {{baseUrl}}/trips
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "description": "Missing both title and destination"
+}
+
+### Not found: a well-formed but nonexistent trip id (expect 404, not
+### a 500 or a cast-error stack trace)
+GET {{baseUrl}}/trips/{{nonExistentId}}
+Authorization: Bearer {{token}}
+
+### Not found: invalid route entirely (expect 404)
 GET {{baseUrl}}/not-existing
 Authorization: Bearer {{token}}
