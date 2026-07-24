@@ -34,16 +34,12 @@ function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // location.state.from is only ever set by ProtectedRoute, and only
-  // when this specific unauthenticated visit tried to reach a
-  // protected page (see ProtectedRoute.jsx) - logging out no longer
-  // produces this state (see AuthContext's logout), so it can no
-  // longer point at a previous, different user's last route. With no
-  // such intended destination, land on the standard authenticated
-  // page rather than the public Home page.
-  const destination =
-    location.state?.from?.pathname || "/trips";
-
+  // A normal login always lands on /trips, full stop. We deliberately
+  // do not read location.state.from here: ProtectedRoute may still set
+  // it, but reusing it for a normal login is exactly what let one
+  // user's abandoned route leak into the next user's session after
+  // logout. There is no deliberate invitation/deep-link flow yet, so
+  // there is nothing legitimate for a normal login to restore.
   const successMessage =
     location.state?.message || "";
 
@@ -62,7 +58,7 @@ function Login() {
 
     try {
       await login(formData);
-      navigate(destination, { replace: true });
+      navigate("/trips", { replace: true });
     } catch {
       // The authentication context handles the error message.
     }
