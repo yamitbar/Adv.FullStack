@@ -34,8 +34,15 @@ function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // location.state.from is only ever set by ProtectedRoute, and only
+  // when this specific unauthenticated visit tried to reach a
+  // protected page (see ProtectedRoute.jsx) - logging out no longer
+  // produces this state (see AuthContext's logout), so it can no
+  // longer point at a previous, different user's last route. With no
+  // such intended destination, land on the standard authenticated
+  // page rather than the public Home page.
   const destination =
-    location.state?.from?.pathname || "/";
+    location.state?.from?.pathname || "/trips";
 
   const successMessage =
     location.state?.message || "";

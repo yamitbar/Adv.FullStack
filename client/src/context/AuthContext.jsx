@@ -1,16 +1,21 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
 
+import { useNavigate } from "react-router-dom";
+
 import api from "../services/api";
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
+  const navigate = useNavigate();
+
   const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem("user");
 
@@ -131,14 +136,35 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  // useCallback (rather than a plain function, unlike login/register/
+  // clearAuthError above) because it closes over `navigate`, a hook
+  // value - keeping it stable lets it be listed explicitly in the
+  // `value` useMemo's dependency array below without defeating that
+  // memoization on every render.
+  const logout = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
 
     setToken(null);
     setUser(null);
     setError(null);
-  };
+
+    // Navigate to /login in the same tick as the auth-state update
+    // above (React batches both, so the router re-renders once with
+    // the new location already in place). This matters: without an
+    // explicit navigate here, logging out while on a protected route
+    // (e.g. /trips/:id) left the URL unchanged, so ProtectedRoute
+    // re-rendered with isAuthenticated=false at that same URL and
+    // redirected to /login itself - stashing the just-abandoned route
+    // as location.state.from, indistinguishable from a genuine
+    // logged-out user trying to reach a protected page. The next
+    // person to log in on that same /login screen then inherited the
+    // previous user's route. Navigating here first means /login is
+    // already the current location by the time anything re-renders,
+    // so ProtectedRoute for the old route never gets a chance to run.
+    // No `state` is passed, so this /login entry starts clean.
+    navigate("/login", { replace: true });
+  }, [navigate]);
 
   const clearAuthError = () => {
     setError(null);
@@ -163,6 +189,7 @@ export const AuthProvider = ({ children }) => {
       loading,
       initializing,
       error,
+      logout,
     ]
   );
 
