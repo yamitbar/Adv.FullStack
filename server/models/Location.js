@@ -38,7 +38,25 @@ const locationSchema = new mongoose.Schema(
       type: Number,
     },
 
+    // Legacy field from an earlier, unmerged Google Places integration
+    // attempt. No production data ever used it, but it's kept optional
+    // rather than removed in case any existing document already has
+    // one set. New locations use the provider-neutral `placeId` below
+    // instead (currently populated by Geoapify's Address Autocomplete
+    // API).
     googlePlaceId: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    // Provider-neutral external place identifier (currently Geoapify's
+    // `place_id`, from the Address Autocomplete API). Optional: not
+    // every location has one, e.g. older documents created before this
+    // field existed, or locations added without selecting a
+    // suggestion (once autocomplete is unavailable, the address field
+    // still works as plain text - see AddressAutocomplete.jsx).
+    placeId: {
       type: String,
       trim: true,
       default: "",

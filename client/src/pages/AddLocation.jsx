@@ -27,7 +27,7 @@ import {
   createLocation,
 } from "../store/slices/tripsSlice";
 
-import GoogleAddressAutocomplete from "../components/locations/GoogleAddressAutocomplete";
+import AddressAutocomplete from "../components/locations/AddressAutocomplete";
 
 import "./AddLocation.css";
 
@@ -37,18 +37,18 @@ const initialFormData = {
   visitedAt: "",
 };
 
-// Internal Google place metadata for the address field. This is never
-// rendered directly - only `address` is shown to the user, via the
-// GoogleAddressAutocomplete component. `isValid` tracks whether the
-// current address text is a trustworthy Google selection (or, for a
-// fresh Add form, simply unset); see GoogleAddressAutocomplete's own
-// comments for the full stale-address-prevention design.
+// Internal Geoapify place metadata for the address field. This is
+// never rendered directly - only `address` is shown to the user, via
+// the AddressAutocomplete component. `isValid` tracks whether the
+// current address text is a trustworthy selection (or, for a fresh
+// Add form, simply unset); see AddressAutocomplete's own comments for
+// the full stale-address-prevention design.
 const initialPlaceData = {
   address: "",
   placeName: "",
   lat: null,
   lng: null,
-  googlePlaceId: "",
+  placeId: "",
   isValid: true,
 };
 
@@ -130,8 +130,8 @@ function AddLocation() {
       locationData.lng = placeData.lng;
     }
 
-    if (placeData.googlePlaceId) {
-      locationData.googlePlaceId = placeData.googlePlaceId;
+    if (placeData.placeId) {
+      locationData.placeId = placeData.placeId;
     }
 
     if (formData.visitedAt) {
@@ -259,7 +259,7 @@ function AddLocation() {
               </small>
             </label>
 
-            <GoogleAddressAutocomplete
+            <AddressAutocomplete
               id="address"
               label="Full address"
               placeholder="Arizona, United States"

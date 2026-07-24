@@ -29,7 +29,13 @@ const createLocationSchema = Joi.object({
     "number.max": "Longitude must be between -180 and 180",
   }),
 
+  // Legacy, unused by the current (Geoapify-based) autocomplete - kept
+  // optional for backward compatibility, see Location.js.
   googlePlaceId: Joi.string().trim().allow("").optional(),
+
+  // Provider-neutral external place identifier (currently Geoapify's
+  // place_id). Optional - not every location has one.
+  placeId: Joi.string().trim().allow("").optional(),
 
   coverImage: Joi.string().trim().allow("").optional(),
 
@@ -60,6 +66,8 @@ const updateLocationSchema = Joi.object({
   }),
 
   googlePlaceId: Joi.string().trim().allow("").optional(),
+
+  placeId: Joi.string().trim().allow("").optional(),
 
   coverImage: Joi.string().trim().allow("").optional(),
 

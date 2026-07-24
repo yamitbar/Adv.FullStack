@@ -25,7 +25,7 @@ import {
 
 import api, { resolveMediaUrl } from "../services/api";
 import MemoriesSection from "../components/memories/MemoriesSection";
-import GoogleAddressAutocomplete from "../components/locations/GoogleAddressAutocomplete";
+import AddressAutocomplete from "../components/locations/AddressAutocomplete";
 import { useAuth } from "../context/AuthContext";
 import { isSameEntity } from "../utils/normalizeId";
 
@@ -49,18 +49,18 @@ const emptyEditForm = {
   coverImage: "",
 };
 
-// Internal Google place metadata for the edit form's address field -
+// Internal Geoapify place metadata for the edit form's address field -
 // same shape/purpose as AddLocation.jsx's placeData. Seeded from the
 // loaded location whenever editing starts (see handleStartEdit), so
 // that saving without touching the address preserves the existing
-// placeName/lat/lng/googlePlaceId - including for older locations
-// created before this metadata existed, where these are simply null.
+// placeName/lat/lng/placeId - including for older locations created
+// before this metadata existed, where these are simply null.
 const emptyEditPlaceData = {
   address: "",
   placeName: "",
   lat: null,
   lng: null,
-  googlePlaceId: "",
+  placeId: "",
   isValid: true,
 };
 
@@ -161,7 +161,7 @@ function LocationDetails() {
         typeof location.lng === "number"
           ? location.lng
           : null,
-      googlePlaceId: location.googlePlaceId || "",
+      placeId: location.placeId || "",
       isValid: true,
     });
 
@@ -223,8 +223,8 @@ function LocationDetails() {
       locationData.lng = editPlaceData.lng;
     }
 
-    if (editPlaceData.googlePlaceId) {
-      locationData.googlePlaceId = editPlaceData.googlePlaceId;
+    if (editPlaceData.placeId) {
+      locationData.placeId = editPlaceData.placeId;
     }
 
     if (editForm.visitedAt) {
@@ -480,7 +480,7 @@ function LocationDetails() {
               />
             </label>
 
-            <GoogleAddressAutocomplete
+            <AddressAutocomplete
               id="edit-address"
               label="Full address"
               required
@@ -490,7 +490,7 @@ function LocationDetails() {
                 placeName: editPlaceData.placeName,
                 lat: editPlaceData.lat,
                 lng: editPlaceData.lng,
-                googlePlaceId: editPlaceData.googlePlaceId,
+                placeId: editPlaceData.placeId,
               }}
               onChange={handleEditPlaceChange}
             />
