@@ -1,10 +1,15 @@
 import {
   ArrowLeft,
+  Compass,
   MapPin,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { useAuth } from "../context/AuthContext";
+
 function NotFound() {
+  const { isAuthenticated } = useAuth();
+
   return (
     <section className="not-found-page">
       <div className="not-found-content">
@@ -20,13 +25,25 @@ function NotFound() {
           exist or may have been moved.
         </p>
 
-        <Link
-          to="/"
-          className="button button-primary"
-        >
-          <ArrowLeft size={17} />
-          Return home
-        </Link>
+        <div className="not-found-actions">
+          <Link
+            to="/"
+            className="button button-primary"
+          >
+            <ArrowLeft size={17} />
+            Return home
+          </Link>
+
+          {isAuthenticated && (
+            <Link
+              to="/trips"
+              className="button button-secondary"
+            >
+              <Compass size={17} />
+              My Trips
+            </Link>
+          )}
+        </div>
       </div>
     </section>
   );

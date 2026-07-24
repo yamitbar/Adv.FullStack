@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import { Provider } from "react-redux";
 
 import App from "./App";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 import { AuthProvider } from "./context/AuthContext";
 import { store } from "./store/store";
 
@@ -25,7 +26,9 @@ ReactDOM.createRoot(
     <BrowserRouter>
       <Provider store={store}>
         <AuthProvider>
-          <App />
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
         </AuthProvider>
       </Provider>
     </BrowserRouter>

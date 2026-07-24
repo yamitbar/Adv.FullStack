@@ -1,0 +1,72 @@
+.error-boundary-page {
+  min-height: 760px;
+  display: grid;
+  place-items: center;
+  padding: 125px 20px 80px;
+  background:
+    radial-gradient(
+      circle at top right,
+      var(--forest-100),
+      transparent 36%
+    ),
+    var(--sand-50);
+}
+
+.error-boundary-content {
+  width: min(100%, 650px);
+  padding: 55px;
+  border: 1px solid var(--forest-100);
+  border-radius: 29px;
+  background: white;
+  box-shadow: var(--shadow-soft);
+  text-align: center;
+}
+
+.error-boundary-icon {
+  width: 66px;
+  height: 66px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 23px;
+  border-radius: 22px;
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.error-boundary-content h1 {
+  margin: 0 0 13px;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  letter-spacing: -0.03em;
+}
+
+.error-boundary-content p {
+  margin: 0 auto 24px;
+  color: var(--text-soft);
+  line-height: 1.75;
+}
+
+.error-boundary-detail {
+  margin: 0 0 24px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.8rem;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-boundary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .error-boundary-content {
+    padding: 40px 22px;
+  }
+}

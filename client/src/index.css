@@ -1002,6 +1002,13 @@ img {
   letter-spacing: -0.1em;
 }
 
+.not-found-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
 .page-loader {
   min-height: 100vh;
   display: flex;
