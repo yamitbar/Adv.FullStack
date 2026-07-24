@@ -25,6 +25,7 @@ import {
 
 import api, { resolveMediaUrl } from "../services/api";
 import MemoriesSection from "../components/memories/MemoriesSection";
+import GoogleAddressAutocomplete from "../components/locations/GoogleAddressAutocomplete";
 import { useAuth } from "../context/AuthContext";
 import { isSameEntity } from "../utils/normalizeId";
 
@@ -44,9 +45,23 @@ function formatDate(dateValue) {
 
 const emptyEditForm = {
   title: "",
-  address: "",
   visitedAt: "",
   coverImage: "",
+};
+
+// Internal Google place metadata for the edit form's address field -
+// same shape/purpose as AddLocation.jsx's placeData. Seeded from the
+// loaded location whenever editing starts (see handleStartEdit), so
+// that saving without touching the address preserves the existing
+// placeName/lat/lng/googlePlaceId - including for older locations
+// created before this metadata existed, where these are simply null.
+const emptyEditPlaceData = {
+  address: "",
+  placeName: "",
+  lat: null,
+  lng: null,
+  googlePlaceId: "",
+  isValid: true,
 };
 
 function toDateInputValue(dateValue) {
@@ -70,6 +85,9 @@ function LocationDetails() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState(
     emptyEditForm
+  );
+  const [editPlaceData, setEditPlaceData] = useState(
+    emptyEditPlaceData
   );
   const [editError, setEditError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -126,11 +144,25 @@ function LocationDetails() {
   const handleStartEdit = () => {
     setEditForm({
       title: location.title || "",
-      address: location.address || "",
       visitedAt: toDateInputValue(
         location.visitedAt
       ),
       coverImage: location.coverImage || "",
+    });
+
+    setEditPlaceData({
+      address: location.address || "",
+      placeName: location.placeName || "",
+      lat:
+        typeof location.lat === "number"
+          ? location.lat
+          : null,
+      lng:
+        typeof location.lng === "number"
+          ? location.lng
+          : null,
+      googlePlaceId: location.googlePlaceId || "",
+      isValid: true,
     });
 
     setEditError("");
@@ -151,11 +183,23 @@ function LocationDetails() {
     }));
   };
 
+  const handleEditPlaceChange = (nextPlaceData) => {
+    setEditError("");
+    setEditPlaceData(nextPlaceData);
+  };
+
   const handleEditSubmit = async (event) => {
     event.preventDefault();
 
-    if (!editForm.address.trim()) {
+    if (!editPlaceData.address.trim()) {
       setEditError("Address is required.");
+      return;
+    }
+
+    if (!editPlaceData.isValid) {
+      setEditError(
+        "Please select an address from the suggestions."
+      );
       return;
     }
 
@@ -163,9 +207,25 @@ function LocationDetails() {
     // simply left out of the request rather than sent as "".
     const locationData = {
       title: editForm.title.trim(),
-      address: editForm.address.trim(),
+      address: editPlaceData.address.trim(),
       coverImage: editForm.coverImage.trim(),
     };
+
+    if (editPlaceData.placeName) {
+      locationData.placeName = editPlaceData.placeName;
+    }
+
+    if (typeof editPlaceData.lat === "number") {
+      locationData.lat = editPlaceData.lat;
+    }
+
+    if (typeof editPlaceData.lng === "number") {
+      locationData.lng = editPlaceData.lng;
+    }
+
+    if (editPlaceData.googlePlaceId) {
+      locationData.googlePlaceId = editPlaceData.googlePlaceId;
+    }
 
     if (editForm.visitedAt) {
       locationData.visitedAt = editForm.visitedAt;
@@ -420,16 +480,20 @@ function LocationDetails() {
               />
             </label>
 
-            <label className="location-edit-full">
-              Full address
-              <input
-                type="text"
-                name="address"
-                value={editForm.address}
-                onChange={handleEditChange}
-                required
-              />
-            </label>
+            <GoogleAddressAutocomplete
+              id="edit-address"
+              label="Full address"
+              required
+              className="location-edit-full"
+              initialAddress={editPlaceData.address}
+              initialPlace={{
+                placeName: editPlaceData.placeName,
+                lat: editPlaceData.lat,
+                lng: editPlaceData.lng,
+                googlePlaceId: editPlaceData.googlePlaceId,
+              }}
+              onChange={handleEditPlaceChange}
+            />
 
             <label>
               Date visited

@@ -27,13 +27,29 @@ import {
   createLocation,
 } from "../store/slices/tripsSlice";
 
+import GoogleAddressAutocomplete from "../components/locations/GoogleAddressAutocomplete";
+
 import "./AddLocation.css";
 
 const initialFormData = {
   title: "",
-  address: "",
   coverImage: "",
   visitedAt: "",
+};
+
+// Internal Google place metadata for the address field. This is never
+// rendered directly - only `address` is shown to the user, via the
+// GoogleAddressAutocomplete component. `isValid` tracks whether the
+// current address text is a trustworthy Google selection (or, for a
+// fresh Add form, simply unset); see GoogleAddressAutocomplete's own
+// comments for the full stale-address-prevention design.
+const initialPlaceData = {
+  address: "",
+  placeName: "",
+  lat: null,
+  lng: null,
+  googlePlaceId: "",
+  isValid: true,
 };
 
 function AddLocation() {
@@ -44,6 +60,9 @@ function AddLocation() {
 
   const [formData, setFormData] =
     useState(initialFormData);
+
+  const [placeData, setPlaceData] =
+    useState(initialPlaceData);
 
   const [localError, setLocalError] =
     useState("");
@@ -71,19 +90,49 @@ function AddLocation() {
     }));
   };
 
+  const handlePlaceChange = (nextPlaceData) => {
+    setLocalError("");
+    dispatch(clearCreateLocationError());
+
+    setPlaceData(nextPlaceData);
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!formData.address.trim()) {
+    if (!placeData.address.trim()) {
       setLocalError("Address is required.");
+      return;
+    }
+
+    if (!placeData.isValid) {
+      setLocalError(
+        "Please select an address from the suggestions."
+      );
       return;
     }
 
     const locationData = {
       title: formData.title.trim(),
-      address: formData.address.trim(),
+      address: placeData.address.trim(),
       coverImage: formData.coverImage.trim(),
     };
+
+    if (placeData.placeName) {
+      locationData.placeName = placeData.placeName;
+    }
+
+    if (typeof placeData.lat === "number") {
+      locationData.lat = placeData.lat;
+    }
+
+    if (typeof placeData.lng === "number") {
+      locationData.lng = placeData.lng;
+    }
+
+    if (placeData.googlePlaceId) {
+      locationData.googlePlaceId = placeData.googlePlaceId;
+    }
 
     if (formData.visitedAt) {
       locationData.visitedAt =
@@ -210,17 +259,13 @@ function AddLocation() {
               </small>
             </label>
 
-            <label>
-              Full address
-              <input
-                type="text"
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                placeholder="Arizona, United States"
-                required
-              />
-            </label>
+            <GoogleAddressAutocomplete
+              id="address"
+              label="Full address"
+              placeholder="Arizona, United States"
+              required
+              onChange={handlePlaceChange}
+            />
 
             <label>
               Date visited
