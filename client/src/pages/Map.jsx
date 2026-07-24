@@ -121,9 +121,41 @@ function Map() {
     useState("");
   const fetchedTripIdsRef = useRef("");
 
+  // Identifies the most recently *started* locations fetch, so a
+  // request that's been superseded by a newer one (because `trips`
+  // changed to a genuinely different set while the old request was
+  // still in flight) can recognize that and skip applying its result
+  // - without relying on an effect-cleanup "cancelled" flag, which
+  // React's Strict Mode flips on its synthetic dev-mode double-invoke
+  // even though `fetchedTripIdsRef` below already prevented a second
+  // real request from ever starting. That combination previously left
+  // `locationsLoading` stuck `true` forever: the one real request's
+  // completion handler saw a stale `cancelled === true` (set by Strict
+  // Mode's synthetic unmount, not a real one) and returned before ever
+  // calling setLocationsLoading(false), and no second request existed
+  // to clear it either. Comparing against this ref instead is
+  // unaffected by Strict Mode's synthetic mount/unmount/mount cycle,
+  // since nothing resets it except actually starting a new fetch.
+  const requestIdRef = useRef(0);
+
+  // True whenever this component is actually mounted (not Strict
+  // Mode's synthetic double-invoke - see the effect below, which
+  // re-asserts `true` on every real or synthetic mount and is only
+  // ever set `false` by a real unmount's cleanup). Guards against
+  // updating state after the page has genuinely been left.
+  const isMountedRef = useRef(true);
+
   const [selectedTripId, setSelectedTripId] =
     useState("all");
   const preselectAppliedRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     dispatch(fetchTrips());
@@ -138,8 +170,16 @@ function Map() {
   // currently-viewed trip and would be overwritten by (and would
   // itself overwrite) this page's multi-trip aggregation.
   useEffect(() => {
-    if (tripsLoading || trips.length === 0) {
-      return undefined;
+    if (tripsLoading) {
+      return;
+    }
+
+    if (trips.length === 0) {
+      // Nothing to fetch - make sure the page can never get stuck on
+      // the loading state waiting for a request that will never
+      // start (e.g. every trip was deleted after an earlier fetch).
+      setLocationsLoading(false);
+      return;
     }
 
     const idsKey = trips
@@ -148,56 +188,79 @@ function Map() {
       .join(",");
 
     if (fetchedTripIdsRef.current === idsKey) {
-      return undefined;
+      return;
     }
 
     fetchedTripIdsRef.current = idsKey;
 
-    let cancelled = false;
+    requestIdRef.current += 1;
+    const thisRequestId = requestIdRef.current;
+    const isCurrentRequest = () =>
+      isMountedRef.current &&
+      requestIdRef.current === thisRequestId;
+
     setLocationsLoading(true);
     setLocationsError("");
 
-    Promise.allSettled(
-      trips.map((trip) =>
-        api
-          .get(`/trips/${trip._id}/locations`)
-          .then((response) => ({
-            tripId: trip._id,
-            locations: response.data.locations || [],
-          }))
-      )
-    ).then((results) => {
-      if (cancelled) {
-        return;
-      }
-
-      const nextMap = {};
-      let anyFailed = false;
-
-      results.forEach((result, index) => {
-        const tripId = trips[index]._id;
-
-        if (result.status === "fulfilled") {
-          nextMap[tripId] = result.value.locations;
-        } else {
-          anyFailed = true;
-          nextMap[tripId] = [];
-        }
-      });
-
-      setLocationsByTrip(nextMap);
-      setLocationsLoading(false);
-
-      if (anyFailed) {
-        setLocationsError(
-          "Some trips' locations could not be loaded. Pull-to-refresh or reload the page to try again."
+    const loadAllLocations = async () => {
+      try {
+        const results = await Promise.allSettled(
+          trips.map((trip) =>
+            api
+              .get(`/trips/${trip._id}/locations`)
+              .then((response) => ({
+                tripId: trip._id,
+                // The endpoint's success shape is always
+                // { success, count, locations: [...] } - never a
+                // bare array or a `data`-wrapped payload.
+                locations:
+                  response.data.locations || [],
+              }))
+          )
         );
-      }
-    });
 
-    return () => {
-      cancelled = true;
+        if (!isCurrentRequest()) {
+          return;
+        }
+
+        const nextMap = {};
+        let anyFailed = false;
+
+        results.forEach((result, index) => {
+          const tripId = trips[index]._id;
+
+          if (result.status === "fulfilled") {
+            nextMap[tripId] = result.value.locations;
+          } else {
+            anyFailed = true;
+            nextMap[tripId] = [];
+          }
+        });
+
+        setLocationsByTrip(nextMap);
+
+        if (anyFailed) {
+          setLocationsError(
+            "Some trips' locations could not be loaded. Pull-to-refresh or reload the page to try again."
+          );
+        }
+      } catch {
+        // Promise.allSettled itself never rejects, but guard against
+        // an unexpected synchronous error above it anyway so this
+        // request still always resolves the loading state below.
+        if (isCurrentRequest()) {
+          setLocationsError(
+            "Locations could not be loaded. Reload the page to try again."
+          );
+        }
+      } finally {
+        if (isCurrentRequest()) {
+          setLocationsLoading(false);
+        }
+      }
     };
+
+    loadAllLocations();
   }, [trips, tripsLoading]);
 
   // Optionally preselect a trip from ?trip=<id> (e.g. a "View on Map"
