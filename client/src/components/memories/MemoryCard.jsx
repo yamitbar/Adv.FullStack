@@ -21,6 +21,7 @@ import {
 import { resolveMediaUrl } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { isSameEntity } from "../../utils/normalizeId";
+import ImageLightbox from "../common/ImageLightbox";
 
 import {
   deleteMemory,
@@ -59,6 +60,7 @@ function MemoryCard({ memory }) {
   const [draftContent, setDraftContent] = useState(
     memory.content || ""
   );
+  const [openImage, setOpenImage] = useState(null);
 
   const {
     updatingMemoryId,
@@ -282,18 +284,35 @@ function MemoryCard({ memory }) {
               removingImage?.memoryId === memory._id &&
               removingImage?.filename === filename;
 
+            const imageUrl = resolveMediaUrl(
+              imagePath
+            );
+            const imageAlt = `Memory photo from ${
+              memory.content || creatorName
+            }`;
+
             return (
               <div
                 key={imagePath}
                 className="memory-card-image"
               >
-                <img
-                  src={resolveMediaUrl(imagePath)}
-                  alt={`Memory photo from ${
-                    memory.content || creatorName
-                  }`}
-                  loading="lazy"
-                />
+                <button
+                  type="button"
+                  className="memory-card-image-trigger"
+                  aria-label="View full-size image"
+                  onClick={() =>
+                    setOpenImage({
+                      src: imageUrl,
+                      alt: imageAlt,
+                    })
+                  }
+                >
+                  <img
+                    src={imageUrl}
+                    alt={imageAlt}
+                    loading="lazy"
+                  />
+                </button>
 
                 {isOwner && (
                   <button
@@ -352,6 +371,14 @@ function MemoryCard({ memory }) {
               </span>
             )}
         </div>
+      )}
+
+      {openImage && (
+        <ImageLightbox
+          src={openImage.src}
+          alt={openImage.alt}
+          onClose={() => setOpenImage(null)}
+        />
       )}
     </article>
   );

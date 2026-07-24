@@ -1,0 +1,63 @@
+.image-lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(15, 24, 20, 0.86);
+  animation: image-lightbox-fade-in 140ms ease;
+}
+
+@keyframes image-lightbox-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.image-lightbox-image {
+  max-width: min(90vw, 1100px);
+  max-height: 88vh;
+  border-radius: 0.9rem;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  object-fit: contain;
+  cursor: default;
+}
+
+.image-lightbox-close {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #17221d;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.image-lightbox-close:hover {
+  background: #eef5f0;
+}
+
+@media (max-width: 700px) {
+  .image-lightbox-backdrop {
+    padding: 1rem;
+  }
+
+  .image-lightbox-close {
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 40px;
+    height: 40px;
+  }
+}

@@ -94,6 +94,22 @@
   height: 110px;
 }
 
+.memory-card-image-trigger {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.memory-card-image-trigger:focus-visible {
+  outline: 2px solid #377d61;
+  outline-offset: 2px;
+  border-radius: 0.9rem;
+}
+
 .memory-card-image img {
   width: 100%;
   height: 100%;
@@ -109,11 +125,13 @@
   display: grid;
   width: 22px;
   height: 22px;
+  padding: 0;
   place-items: center;
   border: 2px solid #ffffff;
   border-radius: 50%;
   color: #ffffff;
   background: #a83d3d;
+  line-height: 0;
   cursor: pointer;
 }
 
