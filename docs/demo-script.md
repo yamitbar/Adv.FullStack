@@ -7,10 +7,10 @@ Suggested prep: have two browser windows/profiles ready (or one regular + one in
 ## Flow
 
 **1. Register / Login** (~45s)
-Go to `/register`, create an account (name, email, password). You'll land on `/login` with a "you can now log in" message — register intentionally does not log you in automatically, only login issues a session. Log in with the new account.
+Go to `/register`, create an account (name, email, password). You'll land on `/login` with a "you can now log in" message — register intentionally does not log you in automatically, only login issues a session. Log in with the new account — you land on the **Home** page (`/`), which now shows a personalized hero and, once you have trips, a "recent journeys" preview. This is deliberate: login never restores a previous route (including a different user's), so every login lands on the same predictable page.
 
 **2. Create a trip** (~30s)
-From **My Trips**, click **Create a trip**. Fill in title and destination (required), optionally description/dates/cover image. Submit — you land back on My Trips or the new trip's page with a success message.
+From Home, open **My Trips** in the navbar, then click **Create a trip**. Fill in title and destination (required), optionally description/dates/cover image. Submit — you land back on My Trips or the new trip's page with a success message.
 
 **3. Edit the trip** (~20s)
 Open the trip, click **Edit trip**, change the title or description, save. Point out the updated value renders immediately (no refresh needed).
@@ -28,8 +28,8 @@ Open **Map** from the navbar (or **View on map** from the trip page). Point out 
 Back on the location, type a memory in the **Add a memory** box, save. Point out the creator's name appears immediately next to the memory — no refresh required.
 
 **8. Upload an image and open it full-size** (~40s)
-Either attach an image before saving a new memory, or use **Add photos** on the memory just created. Show the thumbnail appearing in the memory card after upload completes, then click it to open the full-size image viewer (Escape or clicking the backdrop closes it).
-- *Fallback if the upload fails or looks broken live:* say so plainly — "this is one of the things manual QA is still confirming" — and continue with the text-only flow. Do not claim it works if it visibly doesn't during the demo.
+Either attach an image before saving a new memory, or use **Add photos** on the memory just created. Show the thumbnail appearing in the memory card after upload completes, then click it to open the full-size image viewer (Escape or clicking the backdrop closes it), and point out the delete-X on the thumbnail is properly centered. Manual browser QA has confirmed both the lightbox and the delete-X work.
+- *Fallback if the upload fails live anyway (network, browser extensions, etc.):* say so plainly and continue with the text-only flow rather than insisting it should work.
 
 **9. Join with a second user** (~45s)
 Switch to the second browser window/profile, register or log in as a different account, go to **My Trips → Join with invite code**, paste the code from step 4. The trip now appears in the second account's list.
@@ -51,5 +51,4 @@ Use the navbar logout control. Confirm you're returned to a logged-out view and 
 - **Any network/server error appears:** don't improvise — say what the error message actually says, and move to the next step rather than retrying repeatedly on stage.
 - **Geoapify suggestions don't appear:** confirm `VITE_GEOAPIFY_API_KEY` is set in `client/.env` and the dev server was restarted after adding it; if there's genuinely no key available, say so and continue - Add/Edit Location still works as plain text entry, it just won't produce a map marker for that location.
 - **Second-user step is awkward live:** pre-register the second account before the demo starts, so step 9 is just "log in and join" rather than a full registration under time pressure.
-- **Image upload is the one area still being manually verified** as of this writing — see the root README's Testing section for current status before promising it works.
 - **Time runs short:** steps 3 (edit trip) and 12 (edit/delete) are the safest to compress or skip — the CRUD pattern is already demonstrated by trip creation and location/memory creation.

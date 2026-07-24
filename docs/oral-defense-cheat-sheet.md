@@ -76,7 +76,7 @@ They're populated automatically the moment the user selects a Geoapify suggestio
 
 ## What are the current limitations?
 
-No automated test suite (verification is manual: `api-tests.rest` plus static checks). Uploaded images live on local disk, which is ephemeral on Heroku — fine for a live demo, not for long-term storage. No password reset or email verification flow. The map has no marker clustering, directions, live GPS, or weather/ratings/photos from external APIs - all explicitly out of scope. Manual browser QA against a real Geoapify key is still the one item that hasn't been marked complete as of this writing — check the root README's Testing section for the current, honest status.
+No automated test suite (verification is manual: `api-tests.rest` plus static checks, plus manual browser QA of the core flows against a real Geoapify key). Uploaded images live on local disk, which is ephemeral on Heroku — fine for a live demo, not for long-term storage. No password reset or email verification flow. The map has no marker clustering, directions, live GPS, or weather/ratings/photos from external APIs - all explicitly out of scope. The project is not yet deployed - check the root README's Testing and Deployment sections for the current, honest status.
 
 ## What would be improved with more time?
 
