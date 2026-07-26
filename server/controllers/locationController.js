@@ -188,6 +188,15 @@ const updateLocation = async (req, res, next) => {
     } else if (updates.removeCoverImage) {
       updates.coverImage = "";
       updates.coverImagePublicId = "";
+    } else if (
+      typeof updates.coverImage === "string" &&
+      updates.coverImage !== location.coverImage
+    ) {
+      // A plain URL was pasted directly (no file, not a removal) - it
+      // has no Cloudinary public_id of its own, so the old one must be
+      // cleared here too, not just left stale after the old asset below
+      // is destroyed.
+      updates.coverImagePublicId = "";
     }
 
     delete updates.removeCoverImage;

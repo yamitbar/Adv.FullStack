@@ -306,17 +306,36 @@ const uploadMemoryImages = async (req, res, next) => {
     });
   }
 
-  let uploaded;
+  // Promise.allSettled (not Promise.all) so a later failed upload never
+  // hides the public_ids of uploads that already succeeded - those are
+  // still real Cloudinary assets that need to be destroyed, not just
+  // discarded, if any upload in the batch fails.
+  const settledUploads = await Promise.allSettled(
+    req.files.map((file) =>
+      uploadBufferToCloudinary(file.buffer, "pathly/memories")
+    )
+  );
 
-  try {
-    uploaded = await Promise.all(
-      req.files.map((file) =>
-        uploadBufferToCloudinary(file.buffer, "pathly/memories")
-      )
+  const succeededUploads = settledUploads
+    .filter((result) => result.status === "fulfilled")
+    .map((result) => result.value);
+
+  const firstFailedUpload = settledUploads.find(
+    (result) => result.status === "rejected"
+  );
+
+  if (firstFailedUpload) {
+    // At least one upload failed - the memory document is never touched,
+    // and every upload that DID succeed before the failure is destroyed
+    // so it isn't left orphaned in Cloudinary with no matching record.
+    await destroyCloudinaryAssets(
+      succeededUploads.map((item) => item.publicId)
     );
-  } catch (error) {
-    return next(error);
+
+    return next(firstFailedUpload.reason);
   }
+
+  const uploaded = succeededUploads;
 
   try {
     memory.images.push(...uploaded.map((item) => item.url));
