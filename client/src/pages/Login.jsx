@@ -34,13 +34,7 @@ function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // A normal login always lands on the Home page (/), full stop. We
-  // deliberately do not read location.state.from here: ProtectedRoute
-  // may still set it, but reusing it for a normal login is exactly
-  // what let one user's abandoned route leak into the next user's
-  // session after logout. There is no deliberate invitation/deep-link
-  // flow yet, so there is nothing legitimate for a normal login to
-  // restore.
+
   const successMessage =
     location.state?.message || "";
 

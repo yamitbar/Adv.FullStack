@@ -138,6 +138,7 @@ A few behaviors worth knowing before testing or demoing this:
 - **An address must actually be selected from the suggestion list**, not just typed, for coordinates to be captured. If the text is typed but no suggestion is chosen, submitting Add/Edit Location is blocked with "Please select an address from the suggestions." - this exists specifically to avoid ever saving fake/guessed coordinates for an address nobody confirmed.
 - **Editing the address text after selecting a suggestion invalidates that selection** (and its coordinates) until a new suggestion is chosen or the text is changed back - this prevents a new address ever being saved with a previous address's coordinates attached.
 - **Locations without coordinates (including every location created before this feature existed) simply don't appear as markers on `/map`** - they remain completely normal everywhere else in the app (Trip Details, Location Details, memories, editing).
+- **When the current address text has no resolved coordinates but is still savable as free text** (Geoapify unavailable, or an existing location that already has no coordinates), the field shows an inline note - "This address was not found on the map. You can still save it as free text, but this location will not appear on the map." - right under the address input. It disappears as soon as a suggestion is selected, and never shows while the field is empty. Editing an existing location's address back to free text also clears any previously-saved coordinates on save, instead of leaving a stale lat/lng behind.
 - The map's tile attribution (`© OpenStreetMap contributors`) is required by OpenStreetMap's license and is always shown on the map.
 
 ## Authentication flow
@@ -210,6 +211,7 @@ Both are active in the same happy path: `ProtectedRoute` and the navbar read `Au
 - `express-rate-limit` (`server/middleware/rateLimiter.js`) applies a general limiter to all of `/api` (100 requests/15 min in production, a much looser 1000/15 min in development so normal manual QA and map/location loading never trips it) and a stricter, dedicated limiter on `POST /api/auth/login` and `POST /api/auth/register` specifically (10 requests/15 min in production) to slow down credential brute-forcing. Both return a consistent `{ success: false, message }` JSON body, not an HTML error page, and don't apply to `GET /api/auth/me`.
 - File uploads restricted by MIME type, size, and count; upload authorization runs *before* Multer writes anything to disk.
 - Secrets (`JWT_SECRET`, `MONGO_URI`) live only in untracked `.env` files; `.gitignore` excludes `.env`, `uploads/`, `node_modules/`, and `dist/`.
+- `app.set("trust proxy", 1)` (`server/app.js`) so `express-rate-limit` reads the real client IP from `X-Forwarded-For` when deployed behind Heroku/Render/Railway's reverse proxy, instead of misidentifying every request as coming from the proxy itself.
 
 ## Frontend resilience
 
@@ -257,7 +259,9 @@ heroku config:set -a <app-name> APP_BASE=server
 
 Either way, set these Heroku config vars before deploying: `MONGO_URI` (an Atlas connection string — Heroku dynos can't reach a laptop's local MongoDB), `JWT_SECRET`, `JWT_EXPIRES_IN`, `CLIENT_URL` (the deployed frontend's real origin), and `NODE_ENV=production`. Do **not** set `PORT` — Heroku injects it automatically, and `server.js` already reads `process.env.PORT`.
 
-`server/Procfile` (`web: node server.js`) and `server/package.json`'s `engines.node` field are already in place for Heroku's Node buildpack. The `/` route (`GET /`) returns a simple 200 text response and can be used as a health check.
+`server/Procfile` (`web: node server.js`) and `server/package.json`'s `engines.node` field are already in place for Heroku's Node buildpack. The `/` route (`GET /`) returns a simple 200 text response and can be used as a health check. `server/app.js` also sets `app.set("trust proxy", 1)`, required for `express-rate-limit` to read the real client IP through any of these platforms' reverse proxy — without it, every API request would fail once deployed.
+
+**Render or Railway instead of Heroku:** either works with the same `server/` root directory, `MONGO_URI`/`JWT_SECRET`/`JWT_EXPIRES_IN`/`CLIENT_URL`/`NODE_ENV=production` config vars, `npm install` as the build command, and `node server.js` (or `npm start`) as the start/run command — `server/Procfile` isn't read by either, but nothing else changes.
 
 ### Frontend (Vercel or Netlify)
 
@@ -271,6 +275,18 @@ There is no automated test suite. What follows is deliberately split into three 
 
 **Runtime API verification (real database, real HTTP requests).** The 32 requests in `api-tests.rest` were manually executed successfully by the project owner against a real local MongoDB instance and a real running server — this is manual execution via the VS Code REST Client extension, not an automated test run (there is no test runner or CI involved). That pass uncovered one genuine bug: `server/middleware/upload.js` was missing `const path = require("path")`, so every image upload failed at runtime with `ReferenceError: path is not defined` — an error invisible to static syntax checks, only reachable by actually calling the upload endpoint. That fix is committed. This round of testing was performed locally by the project owner, not witnessed or independently reproduced inside this assistant's sandbox (which cannot reach a local MongoDB instance — see `docs/development-notes/batch-4-runtime-delivery-and-docs.md` for why).
 
-**Static verification (reproducible by anyone, anytime).** `node --check` on every backend file, `npm run lint` (oxlint), and `npm run build` (Vite) on the frontend. These pass as of the current commit.
+**Static verification (reproducible by anyone, anytime).** `node --check` on every backend file, `npm run lint` (oxlint), and `npm run build` (Vite) on the frontend. These passed as of the commit before the comment-cleanup/address-hint/deployment-readiness changes; `node --check` was re-run after those changes and still passes, but `npm run lint`/`npm run build` could not be re-run in this assistant's sandbox (both oxlint's and Vite/esbuild's native bindings crash here - a pre-existing sandbox limitation, not something the changes caused) and should be re-run locally before submitting.
 
 **Manual browser QA: core flows confirmed by the project owner.** Clicking through the actual UI in a real browser has confirmed: post-login navigation to the Home page (with no leakage of a previous user's route after logout), Geoapify address autocomplete on Add/Edit Location, the `/map` page loading and rendering correctly, markers and their popups, the trip filter dropdown, the memory image lightbox, the image delete-X control (correctly centered), and the other existing core flows (register/login, trip and location CRUD, join-by-invite-code, authorization differences between creator and participant). This is manual click-through verification by the project owner, not an automated test run. `MANUAL_TEST_PLAN.md` still lists the full checklist (including less-central paths like the 404 page and mobile-width layouts specifically) for anyone who wants to re-verify or extend coverage before a live demo.
+
+## Author
+
+**Yamit** — final project for a full-stack development course (MongoDB, Express, React, Node).
+_Course name, student ID and submission date: fill in before submitting._
+
+## Live links
+
+_Not yet deployed - see Deployment above. Fill in once the frontend and backend are live:_
+
+- **Frontend:** _placeholder_
+- **Backend:** _placeholder_

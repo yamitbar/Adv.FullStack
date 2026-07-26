@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   CalendarDays,
   Image,
   MapPin,
   Plane,
+  X,
 } from "lucide-react";
 import {
   useDispatch,
@@ -22,6 +23,14 @@ import {
 
 import "./CreateTrip.css";
 
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+
 function CreateTrip() {
   const [formData, setFormData] = useState({
     title: "",
@@ -29,11 +38,15 @@ function CreateTrip() {
     description: "",
     startDate: "",
     endDate: "",
-    coverImage: "",
   });
+
+  const [coverImageFile, setCoverImageFile] =
+    useState(null);
 
   const [localError, setLocalError] =
     useState("");
+
+  const fileInputRef = useRef(null);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -47,6 +60,24 @@ function CreateTrip() {
     dispatch(clearCreateTripError());
   }, [dispatch]);
 
+  // Memoized so a blob URL is created exactly once per selected file,
+  // and revoked on unmount/replacement instead of leaking.
+  const previewUrl = useMemo(
+    () =>
+      coverImageFile
+        ? URL.createObjectURL(coverImageFile)
+        : null,
+    [coverImageFile]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
   const handleChange = (event) => {
     setLocalError("");
     dispatch(clearCreateTripError());
@@ -55,6 +86,42 @@ function CreateTrip() {
       ...currentData,
       [event.target.name]: event.target.value,
     }));
+  };
+
+  const handlePickImage = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageSelected = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    setLocalError("");
+    dispatch(clearCreateTripError());
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setLocalError(
+        "Please choose a JPEG, PNG or WebP image."
+      );
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setLocalError(
+        "Image is too large. Please choose a file under 5MB."
+      );
+      return;
+    }
+
+    setCoverImageFile(file);
+  };
+
+  const handleRemoveImage = () => {
+    setCoverImageFile(null);
   };
 
   const handleSubmit = async (event) => {
@@ -72,18 +139,29 @@ function CreateTrip() {
       return;
     }
 
-    const tripData = {
-      title: formData.title.trim(),
-      destination: formData.destination.trim(),
-      description: formData.description.trim(),
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      coverImage: formData.coverImage.trim(),
-    };
+    const tripFormData = new FormData();
+
+    tripFormData.append("title", formData.title.trim());
+    tripFormData.append(
+      "destination",
+      formData.destination.trim()
+    );
+    tripFormData.append(
+      "description",
+      formData.description.trim()
+    );
+    tripFormData.append("startDate", formData.startDate);
+    tripFormData.append("endDate", formData.endDate);
+
+    if (coverImageFile) {
+      tripFormData.append("coverImage", coverImageFile);
+    }
 
     try {
+      // Do NOT set a Content-Type header - Axios computes the
+      // multipart boundary itself when the body is a FormData instance.
       await dispatch(
-        createTrip(tripData)
+        createTrip(tripFormData)
       ).unwrap();
 
       navigate("/trips", {
@@ -158,8 +236,8 @@ function CreateTrip() {
               <div>
                 <strong>Add a cover image</strong>
                 <p>
-                  Use an optional image URL to
-                  personalize the trip.
+                  Upload an optional photo from your
+                  computer to personalize the trip.
                 </p>
               </div>
             </div>
@@ -253,27 +331,46 @@ function CreateTrip() {
               </label>
             </div>
 
-            <label>
-              Cover image URL
-              <input
-                type="url"
-                name="coverImage"
-                value={formData.coverImage}
-                onChange={handleChange}
-                placeholder="https://example.com/trip-cover.jpg"
-              />
-            </label>
+            <div className="create-trip-cover-field">
+              <span className="create-trip-cover-label">
+                Cover image
+              </span>
 
-            {formData.coverImage && (
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                hidden
+                onChange={handleImageSelected}
+              />
+
+              <button
+                type="button"
+                className="button button-secondary create-trip-upload-button"
+                onClick={handlePickImage}
+              >
+                <Image size={17} />
+                {coverImageFile
+                  ? "Change image"
+                  : "Choose image"}
+              </button>
+            </div>
+
+            {previewUrl && (
               <div className="create-trip-preview">
                 <img
-                  src={formData.coverImage}
+                  src={previewUrl}
                   alt="Trip cover preview"
-                  onError={(event) => {
-                    event.currentTarget.style.display =
-                      "none";
-                  }}
                 />
+
+                <button
+                  type="button"
+                  className="create-trip-preview-remove"
+                  aria-label="Remove selected image"
+                  onClick={handleRemoveImage}
+                >
+                  <X size={16} />
+                </button>
               </div>
             )}
 

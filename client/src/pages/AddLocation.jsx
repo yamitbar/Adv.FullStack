@@ -1,5 +1,7 @@
 import {
   useEffect,
+  useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -9,6 +11,7 @@ import {
   Image,
   MapPin,
   Plus,
+  X,
 } from "lucide-react";
 
 import {
@@ -33,16 +36,18 @@ import "./AddLocation.css";
 
 const initialFormData = {
   title: "",
-  coverImage: "",
   visitedAt: "",
 };
 
-// Internal Geoapify place metadata for the address field. This is
-// never rendered directly - only `address` is shown to the user, via
-// the AddressAutocomplete component. `isValid` tracks whether the
-// current address text is a trustworthy selection (or, for a fresh
-// Add form, simply unset); see AddressAutocomplete's own comments for
-// the full stale-address-prevention design.
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+
+// Geoapify place metadata for the address field - see AddressAutocomplete.jsx.
 const initialPlaceData = {
   address: "",
   placeName: "",
@@ -64,8 +69,13 @@ function AddLocation() {
   const [placeData, setPlaceData] =
     useState(initialPlaceData);
 
+  const [coverImageFile, setCoverImageFile] =
+    useState(null);
+
   const [localError, setLocalError] =
     useState("");
+
+  const fileInputRef = useRef(null);
 
   const {
     creatingLocation,
@@ -80,6 +90,24 @@ function AddLocation() {
     };
   }, [dispatch]);
 
+  // Memoized so a blob URL is created exactly once per selected file,
+  // and revoked on unmount/replacement instead of leaking.
+  const previewUrl = useMemo(
+    () =>
+      coverImageFile
+        ? URL.createObjectURL(coverImageFile)
+        : null,
+    [coverImageFile]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
   const handleChange = (event) => {
     setLocalError("");
     dispatch(clearCreateLocationError());
@@ -88,6 +116,42 @@ function AddLocation() {
       ...currentData,
       [event.target.name]: event.target.value,
     }));
+  };
+
+  const handlePickImage = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageSelected = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    setLocalError("");
+    dispatch(clearCreateLocationError());
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setLocalError(
+        "Please choose a JPEG, PNG or WebP image."
+      );
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setLocalError(
+        "Image is too large. Please choose a file under 5MB."
+      );
+      return;
+    }
+
+    setCoverImageFile(file);
+  };
+
+  const handleRemoveImage = () => {
+    setCoverImageFile(null);
   };
 
   const handlePlaceChange = (nextPlaceData) => {
@@ -112,38 +176,67 @@ function AddLocation() {
       return;
     }
 
-    const locationData = {
-      title: formData.title.trim(),
-      address: placeData.address.trim(),
-      coverImage: formData.coverImage.trim(),
-    };
+    const locationFormData = new FormData();
+
+    locationFormData.append(
+      "title",
+      formData.title.trim()
+    );
+
+    locationFormData.append(
+      "address",
+      placeData.address.trim()
+    );
 
     if (placeData.placeName) {
-      locationData.placeName = placeData.placeName;
+      locationFormData.append(
+        "placeName",
+        placeData.placeName
+      );
     }
 
     if (typeof placeData.lat === "number") {
-      locationData.lat = placeData.lat;
+      locationFormData.append(
+        "lat",
+        placeData.lat
+      );
     }
 
     if (typeof placeData.lng === "number") {
-      locationData.lng = placeData.lng;
+      locationFormData.append(
+        "lng",
+        placeData.lng
+      );
     }
 
     if (placeData.placeId) {
-      locationData.placeId = placeData.placeId;
+      locationFormData.append(
+        "placeId",
+        placeData.placeId
+      );
     }
 
     if (formData.visitedAt) {
-      locationData.visitedAt =
-        formData.visitedAt;
+      locationFormData.append(
+        "visitedAt",
+        formData.visitedAt
+      );
+    }
+
+    if (coverImageFile) {
+      locationFormData.append(
+        "coverImage",
+        coverImageFile
+      );
     }
 
     try {
+      // Do NOT set a Content-Type header - Axios computes the
+      // multipart boundary itself when the body is a FormData instance.
       await dispatch(
         createLocation({
           tripId,
-          locationData,
+          locationData: locationFormData,
         })
       ).unwrap();
 
@@ -277,31 +370,50 @@ function AddLocation() {
               />
             </label>
 
-            <label>
-              Cover image URL
-              <div className="input-with-icon">
-                <Image size={18} />
+            <div className="add-location-cover-field">
+              <span className="add-location-cover-label">
+                Cover image
+              </span>
 
-                <input
-                  type="url"
-                  name="coverImage"
-                  value={formData.coverImage}
-                  onChange={handleChange}
-                  placeholder="https://example.com/location.jpg"
-                />
-              </div>
-            </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                hidden
+                onChange={handleImageSelected}
+              />
 
-            {formData.coverImage && (
+              <button
+                type="button"
+                className="button button-secondary add-location-upload-button"
+                onClick={handlePickImage}
+              >
+                <Image size={17} />
+                {coverImageFile
+                  ? "Change image"
+                  : "Choose image"}
+              </button>
+
+              <small>
+                Optional. JPEG, PNG or WebP, up to 5MB.
+              </small>
+            </div>
+
+            {previewUrl && (
               <div className="add-location-preview">
                 <img
-                  src={formData.coverImage}
+                  src={previewUrl}
                   alt="Location cover preview"
-                  onError={(event) => {
-                    event.currentTarget.style.display =
-                      "none";
-                  }}
                 />
+
+                <button
+                  type="button"
+                  className="add-location-preview-remove"
+                  aria-label="Remove selected image"
+                  onClick={handleRemoveImage}
+                >
+                  <X size={16} />
+                </button>
               </div>
             )}
 

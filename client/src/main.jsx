@@ -11,12 +11,8 @@ import { store } from "./store/store";
 
 import "./index.css";
 
-// Leaflet's own stylesheet, imported exactly once here at the app's
-// single entry point (the same pattern as index.css) rather than from
-// the Map page itself - importing it from a lazy-loaded route module
-// risks it being pulled in more than once across renders/HMR, and
-// every part of the app that ever renders a Leaflet map shares this
-// one copy.
+// Leaflet's stylesheet, imported once here (not from the lazy-loaded
+// Map page) so it's never pulled in more than once across renders/HMR.
 import "leaflet/dist/leaflet.css";
 
 ReactDOM.createRoot(

@@ -1,14 +1,8 @@
 import axios from "axios";
 
-// Geoapify is a separate third-party service from the Pathly backend,
-// so this is a small, dedicated axios instance rather than a reuse of
-// ../services/api's `api` export: that instance points at our own
-// backend and automatically attaches our own JWT to every request via
-// an interceptor, neither of which should ever happen on a request to
-// Geoapify. Requests go directly from the browser to Geoapify (no
-// backend proxy) - there is no strong technical reason to route them
-// through our server, and Geoapify's own API is designed for direct
-// browser use with a restricted, referrer-locked key.
+// A dedicated axios instance (not ../services/api's `api`), since
+// requests go directly from the browser to Geoapify and must never
+// carry our own backend's JWT header.
 const GEOAPIFY_API_KEY =
   import.meta.env.VITE_GEOAPIFY_API_KEY || "";
 

@@ -23,11 +23,9 @@ const EMPTY_PLACE = {
   placeId: "",
 };
 
-// Picks the best available short label for a Geoapify result. `name`
-// is only populated for named places/amenities - for a plain street
-// address it's usually empty, so this falls back to the main part of
-// the formatted address, then the city, rather than ever showing a
-// blank label.
+// Picks the best available short label for a Geoapify result - `name`
+// is usually empty for a plain street address, so this falls back to
+// the formatted address, then the city, rather than showing nothing.
 function pickPlaceName(result) {
   return (
     result.name ||
@@ -37,51 +35,13 @@ function pickPlaceName(result) {
   );
 }
 
-/**
- * Reusable Geoapify address autocomplete field.
- *
- * Shows a single address text input (no separate place-name, lat,
- * lng, or place-ID fields are ever rendered). While the user types,
- * a debounced request to Geoapify's Address Autocomplete API
- * (https://api.geoapify.com/v1/geocode/autocomplete) returns
- * suggestions shown in an accessible listbox below the input.
- * Selecting one captures the formatted address, a best-effort place
- * label, coordinates, and Geoapify's place_id internally and reports
- * them to the parent via `onChange` - raw coordinates and the place
- * ID are never rendered.
- *
- * Unlike the earlier Google-based version of this component, the
- * input here is a normal controlled React input: Geoapify's HTTP API
- * has no widget of its own manipulating the DOM, so there's no
- * conflict with React owning the input's value.
- *
- * Stale-address prevention: `lastValidPlaceRef` tracks the address
- * text that is currently "trustworthy" - either the seeded initial
- * address (edit mode, untouched) or the address exactly as it stood
- * right after the user picked a suggestion. Every keystroke compares
- * the new text against that trusted value: if it still matches, the
- * last trusted metadata is reported again; otherwise metadata is
- * cleared and `isValid` is reported as false. If Geoapify itself is
- * unavailable (no API key configured, or the most recent search
- * attempt failed), typed text is instead treated as valid with no
- * coordinates - the same plain-text behavior the address field had
- * before autocomplete existed - so a service outage or a missing key
- * never blocks adding/editing a location, only removes the
- * coordinate-capture convenience. A later successful search (e.g.
- * after the service recovers) resumes the normal selection-required
- * behavior.
- *
- * Props:
- * - id, label, placeholder, required, className: standard presentation.
- * - initialAddress: existing address text to preload (edit mode).
- * - initialPlace: `{ placeName, lat, lng, placeId } | null` -
- *   existing metadata to preload alongside initialAddress so saving
- *   an edit without touching the address preserves it, including for
- *   older records with no coordinates at all.
- * - onChange({ address, placeName, lat, lng, placeId, isValid }):
- *   called on mount (with the seeded state) and on every subsequent
- *   change.
- */
+// Reusable Geoapify address autocomplete field. Reports
+// `onChange({ address, placeName, lat, lng, placeId, isValid })` on
+// every change; `isValid: false` means typed text with no confirmed
+// coordinates (blocks submission upstream), except when Geoapify itself
+// is unavailable, where free text is reported as valid with no
+// coordinates instead. `lastValidPlaceRef` invalidates stale coordinates
+// once the text no longer matches the last confirmed/seeded address.
 export default function AddressAutocomplete({
   id = "address",
   label = "Full address",
@@ -100,6 +60,15 @@ export default function AddressAutocomplete({
     false
   );
   const [activeIndex, setActiveIndex] = useState(-1);
+
+  // Mirrors whatever was last reported via onChange, so this component
+  // can render its own "no coordinates saved" hint without the parent
+  // having to pass state back down.
+  const [reportedPlace, setReportedPlace] = useState({
+    ...EMPTY_PLACE,
+    address: initialAddress,
+    isValid: true,
+  });
 
   // "idle" | "loading" | "no-results" | "error" | "missing-key"
   const [status, setStatus] = useState(() =>
@@ -136,6 +105,7 @@ export default function AddressAutocomplete({
       placeId: initialPlace?.placeId || "",
     };
     lastValidPlaceRef.current = seeded;
+    setReportedPlace({ ...seeded, isValid: true });
     onChangeRef.current?.({ ...seeded, isValid: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -195,24 +165,19 @@ export default function AddressAutocomplete({
       status === "missing-key" || status === "error";
 
     if (matchesConfirmed) {
-      onChangeRef.current?.({
-        ...lastValidPlaceRef.current,
-        isValid: true,
-      });
+      const next = { ...lastValidPlaceRef.current, isValid: true };
+      setReportedPlace(next);
+      onChangeRef.current?.(next);
     } else if (autocompleteDegraded) {
       // Geoapify is unavailable this session - fall back to plain
       // text entry rather than blocking the form.
-      onChangeRef.current?.({
-        ...EMPTY_PLACE,
-        address: value,
-        isValid: true,
-      });
+      const next = { ...EMPTY_PLACE, address: value, isValid: true };
+      setReportedPlace(next);
+      onChangeRef.current?.(next);
     } else {
-      onChangeRef.current?.({
-        ...EMPTY_PLACE,
-        address: value,
-        isValid: false,
-      });
+      const next = { ...EMPTY_PLACE, address: value, isValid: false };
+      setReportedPlace(next);
+      onChangeRef.current?.(next);
     }
 
     if (debounceTimerRef.current) {
@@ -263,6 +228,7 @@ export default function AddressAutocomplete({
 
     lastValidPlaceRef.current = confirmed;
     setInputValue(confirmed.address);
+    setReportedPlace({ ...confirmed, isValid: true });
     onChangeRef.current?.({
       ...confirmed,
       isValid: true,
@@ -385,30 +351,43 @@ export default function AddressAutocomplete({
       </div>
 
       {status === "loading" && (
-        <small aria-live="polite">
+        <small className="address-autocomplete-status" aria-live="polite">
           Searching addresses…
         </small>
       )}
 
       {status === "no-results" && (
-        <small aria-live="polite">
+        <small className="address-autocomplete-status" aria-live="polite">
           No addresses found. Try a more specific search.
         </small>
       )}
 
       {status === "error" && (
-        <small aria-live="polite">
+        <small className="address-autocomplete-status" aria-live="polite">
           Address suggestions are unavailable right now — you can
           still type the address manually.
         </small>
       )}
 
       {status === "missing-key" && (
-        <small aria-live="polite">
+        <small className="address-autocomplete-status" aria-live="polite">
           Address suggestions are not configured yet — you can still
           type the address manually.
         </small>
       )}
+
+      {reportedPlace.isValid &&
+        inputValue.trim().length > 0 &&
+        !(
+          typeof reportedPlace.lat === "number" &&
+          typeof reportedPlace.lng === "number"
+        ) && (
+          <small className="address-autocomplete-hint" aria-live="polite">
+            This address was not found on the map. You can still save
+            it as free text, but this location will not appear on the
+            map.
+          </small>
+        )}
     </label>
   );
 }

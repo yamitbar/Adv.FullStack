@@ -1,5 +1,7 @@
 import {
   useEffect,
+  useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -9,6 +11,7 @@ import {
   Check,
   CircleAlert,
   Copy,
+  Image,
   Map,
   MapPin,
   Pencil,
@@ -70,8 +73,15 @@ const emptyEditForm = {
   description: "",
   startDate: "",
   endDate: "",
-  coverImage: "",
 };
+
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
 // Trims a stored date/time value down to the yyyy-mm-dd shape an
 // <input type="date"> expects.
@@ -110,11 +120,19 @@ function TripDetails() {
   const [editForm, setEditForm] =
     useState(emptyEditForm);
 
+  const [coverImageFile, setCoverImageFile] =
+    useState(null);
+
+  const [removeExistingImage, setRemoveExistingImage] =
+    useState(false);
+
   const [editLocalError, setEditLocalError] =
     useState("");
 
   const [isDeleting, setIsDeleting] =
     useState(false);
+
+  const fileInputRef = useRef(null);
 
   const {
     selectedTrip: trip,
@@ -181,6 +199,24 @@ function TripDetails() {
     user?._id
   );
 
+  // Memoized so a blob URL is created exactly once per selected file,
+  // and revoked on unmount/replacement instead of leaking.
+  const newImagePreviewUrl = useMemo(
+    () =>
+      coverImageFile
+        ? URL.createObjectURL(coverImageFile)
+        : null,
+    [coverImageFile]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (newImagePreviewUrl) {
+        URL.revokeObjectURL(newImagePreviewUrl);
+      }
+    };
+  }, [newImagePreviewUrl]);
+
   const handleStartEdit = () => {
     setEditForm({
       title: trip.title || "",
@@ -190,9 +226,10 @@ function TripDetails() {
         trip.startDate
       ),
       endDate: toDateInputValue(trip.endDate),
-      coverImage: trip.coverImage || "",
     });
 
+    setCoverImageFile(null);
+    setRemoveExistingImage(false);
     setEditLocalError("");
     dispatch(clearUpdateTripError());
     setIsEditing(true);
@@ -200,6 +237,8 @@ function TripDetails() {
 
   const handleCancelEdit = () => {
     setIsEditing(false);
+    setCoverImageFile(null);
+    setRemoveExistingImage(false);
     setEditLocalError("");
     dispatch(clearUpdateTripError());
   };
@@ -213,6 +252,52 @@ function TripDetails() {
       [event.target.name]:
         event.target.value,
     }));
+  };
+
+  const handlePickImage = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageSelected = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    setEditLocalError("");
+    dispatch(clearUpdateTripError());
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setEditLocalError(
+        "Please choose a JPEG, PNG or WebP image."
+      );
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setEditLocalError(
+        "Image is too large. Please choose a file under 5MB."
+      );
+      return;
+    }
+
+    setCoverImageFile(file);
+    setRemoveExistingImage(false);
+  };
+
+  // Clears a just-selected new file, reverting the preview back to the
+  // trip's existing cover image (if it still has one).
+  const handleRemoveSelectedFile = () => {
+    setCoverImageFile(null);
+  };
+
+  // Explicitly clears the trip's existing cover image. Only relevant
+  // when no new file is staged - the removeExistingImage flag is sent
+  // to the backend as removeCoverImage so it can delete the old file.
+  const handleClearExistingImage = () => {
+    setRemoveExistingImage(true);
   };
 
   const handleEditSubmit = async (event) => {
@@ -244,25 +329,61 @@ function TripDetails() {
     // must be left out of the request entirely rather than sent as "".
     // This means clearing a previously-set date isn't supported yet -
     // only setting/changing it while non-empty.
-    const tripData = {
-      title: editForm.title.trim(),
-      destination: editForm.destination.trim(),
-      description: editForm.description.trim(),
-      coverImage: editForm.coverImage.trim(),
-    };
+    const tripFormData = new FormData();
+
+    tripFormData.append("title", editForm.title.trim());
+    tripFormData.append(
+      "destination",
+      editForm.destination.trim()
+    );
+    tripFormData.append(
+      "description",
+      editForm.description.trim()
+    );
 
     if (editForm.startDate) {
-      tripData.startDate = editForm.startDate;
+      tripFormData.append("startDate", editForm.startDate);
     }
 
     if (editForm.endDate) {
-      tripData.endDate = editForm.endDate;
+      tripFormData.append("endDate", editForm.endDate);
     }
 
+    if (coverImageFile) {
+      tripFormData.append("coverImage", coverImageFile);
+    } else if (removeExistingImage) {
+      tripFormData.append("removeCoverImage", "true");
+    }
+
+    // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed
+    // working end-to-end.
+    console.log(
+      "[DEBUG TripDetails submit] coverImageFile:",
+      coverImageFile &&
+        `${coverImageFile.name} (${coverImageFile.size} bytes, ${coverImageFile.type})`
+    );
+    console.log(
+      "[DEBUG TripDetails submit] removeExistingImage:",
+      removeExistingImage
+    );
+    console.log(
+      "[DEBUG TripDetails submit] FormData has coverImage entry:",
+      tripFormData.has("coverImage")
+    );
+
     try {
-      await dispatch(
-        updateTrip({ tripId, tripData })
+      // Do NOT set a Content-Type header - Axios computes the
+      // multipart boundary itself when the body is a FormData instance.
+      const updatedTrip = await dispatch(
+        updateTrip({ tripId, tripData: tripFormData })
       ).unwrap();
+
+      // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed
+      // working end-to-end.
+      console.log(
+        "[DEBUG TripDetails submit] server response coverImage:",
+        updatedTrip.coverImage
+      );
 
       setIsEditing(false);
     } catch {
@@ -571,16 +692,51 @@ function TripDetails() {
               />
             </label>
 
-            <label className="trip-edit-full">
-              Cover image URL
+            <div className="trip-edit-full trip-edit-cover-field">
+              <span className="trip-edit-cover-label">
+                Cover image
+              </span>
+
               <input
-                type="url"
-                name="coverImage"
-                value={editForm.coverImage}
-                onChange={handleEditChange}
-                placeholder="https://example.com/trip-cover.jpg"
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                hidden
+                onChange={handleImageSelected}
               />
-            </label>
+
+              <button
+                type="button"
+                className="button button-secondary trip-edit-upload-button"
+                onClick={handlePickImage}
+              >
+                <Image size={17} />
+                {coverImageFile ? "Change image" : "Choose image"}
+              </button>
+            </div>
+
+            {(newImagePreviewUrl ||
+              (!removeExistingImage && imageUrl)) && (
+              <div className="trip-edit-full trip-edit-preview">
+                <img
+                  src={newImagePreviewUrl || imageUrl}
+                  alt="Trip cover preview"
+                />
+
+                <button
+                  type="button"
+                  className="trip-edit-preview-remove"
+                  aria-label="Remove image"
+                  onClick={
+                    newImagePreviewUrl
+                      ? handleRemoveSelectedFile
+                      : handleClearExistingImage
+                  }
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
 
             <div className="trip-edit-actions">
               <button

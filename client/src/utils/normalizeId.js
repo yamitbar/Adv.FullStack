@@ -1,8 +1,6 @@
-// Trip/Location/Memory "createdBy" fields can come back from the API as
-// either a raw ObjectId string or a populated object (e.g. { _id, name,
-// email }) depending on the endpoint. These helpers make id comparisons
-// safe regardless of which shape is present, instead of duplicating the
-// same `typeof` checks in every component.
+// "createdBy" fields can come back as either a raw ObjectId string or a
+// populated object ({ _id, name, ... }) depending on the endpoint -
+// these helpers make id comparisons safe regardless of which shape it is.
 
 export function getEntityId(value) {
   if (!value) {
@@ -27,14 +25,8 @@ export function isSameEntity(a, b) {
   return Boolean(idA && idB && idA === idB);
 }
 
-// Counts the unique travelers on a trip: the creator plus every
-// participant, without double-counting the creator when they also
-// appear in `participants` (which they normally do - the backend adds
-// the creator to `participants` on trip creation - but this stays
-// correct even for older/edge-case data where that isn't true, where
-// `participants` is missing entirely, or where it contains duplicate
-// ids). Works whether `createdBy`/`participants` entries are raw
-// ObjectId strings or populated user objects.
+// Counts unique travelers (creator + participants), de-duplicated by id
+// since the creator is normally also in `participants`.
 export function getTravelerCount(trip) {
   if (!trip) {
     return 1;
@@ -68,13 +60,9 @@ export function formatTravelerCount(count) {
   return `${count} traveler${count === 1 ? "" : "s"}`;
 }
 
-// Builds the read-only list of travelers on a trip for display (e.g. a
-// participants panel): the creator first, then every unique
-// participant, each de-duplicated by id exactly like getTravelerCount
-// above. Works whether createdBy/participants entries are raw ObjectId
-// strings or populated { _id, name } objects - a raw id with no name
-// available falls back to a generic label rather than showing a bare
-// ObjectId string to the user.
+// Builds the read-only traveler list for display (creator first, then
+// each unique participant); a raw id with no name falls back to a
+// generic label rather than showing a bare ObjectId.
 export function getTravelerList(trip) {
   if (!trip) {
     return [];

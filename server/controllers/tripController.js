@@ -1,5 +1,9 @@
 const Trip = require("../models/Trip");
 const { deleteLocationsForTrip } = require("../utils/cascadeDelete");
+const {
+  deleteLocalUploadedFiles,
+  deleteFilesByAbsolutePath,
+} = require("../utils/mediaCleanup");
 
 const hasInvalidDateRange = (startDate, endDate) => {
   return Boolean(
@@ -21,16 +25,44 @@ const createTrip = async (req, res, next) => {
       coverImage,
     } = req.body;
 
-    const trip = await Trip.create({
-      title,
-      description,
-      destination,
-      startDate,
-      endDate,
-      coverImage,
-      createdBy: req.user._id,
-      participants: [req.user._id],
-    });
+    // An uploaded file always wins over a plain coverImage URL string,
+    // so a client can still fall back to pasting an external URL.
+    const coverImagePath = req.file
+      ? `/uploads/${req.file.filename}`
+      : coverImage || "";
+
+    // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed working end-to-end.
+    console.log("[DEBUG createTrip] req.file:", req.file);
+    console.log("[DEBUG createTrip] req.body keys:", Object.keys(req.body));
+    console.log("[DEBUG createTrip] coverImagePath to save:", coverImagePath);
+
+    let trip;
+
+    try {
+      trip = await Trip.create({
+        title,
+        description,
+        destination,
+        startDate,
+        endDate,
+        coverImage: coverImagePath,
+        createdBy: req.user._id,
+        participants: [req.user._id],
+      });
+
+      // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed working end-to-end.
+      console.log(
+        "[DEBUG createTrip] trip.coverImage after Trip.create:",
+        trip.coverImage
+      );
+    } catch (createError) {
+      // The trip was never saved - remove the uploaded file so it isn't orphaned on disk.
+      if (req.file) {
+        await deleteFilesByAbsolutePath([req.file.path]);
+      }
+
+      throw createError;
+    }
 
     res.status(201).json({
       success: true,
@@ -103,6 +135,13 @@ const updateTrip = async (req, res, next) => {
     });
 
     if (!trip) {
+      // The request is rejected before the trip is touched, so an
+      // uploaded file (if any) would never be referenced by anything -
+      // remove it instead of leaving it orphaned on disk.
+      if (req.file) {
+        await deleteFilesByAbsolutePath([req.file.path]);
+      }
+
       return res.status(404).json({
         success: false,
         message: "Trip not found or you are not allowed to update it",
@@ -120,14 +159,65 @@ const updateTrip = async (req, res, next) => {
         : trip.endDate;
 
     if (hasInvalidDateRange(nextStartDate, nextEndDate)) {
+      if (req.file) {
+        await deleteFilesByAbsolutePath([req.file.path]);
+      }
+
       return res.status(400).json({
         success: false,
         message: "End date must be on or after start date",
       });
     }
 
-    Object.assign(trip, req.body);
-    await trip.save();
+    const previousCoverImage = trip.coverImage;
+    const updates = { ...req.body };
+
+    // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed working end-to-end.
+    console.log("[DEBUG updateTrip] req.file:", req.file);
+    console.log("[DEBUG updateTrip] req.body keys:", Object.keys(req.body));
+    console.log(
+      "[DEBUG updateTrip] previousCoverImage:",
+      previousCoverImage
+    );
+
+    // A new file replaces the cover image; an explicit removeCoverImage
+    // flag clears it; otherwise Object.assign leaves it untouched.
+    if (req.file) {
+      updates.coverImage = `/uploads/${req.file.filename}`;
+    } else if (updates.removeCoverImage) {
+      updates.coverImage = "";
+    }
+
+    delete updates.removeCoverImage;
+
+    Object.assign(trip, updates);
+
+    try {
+      await trip.save();
+
+      // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed working end-to-end.
+      console.log(
+        "[DEBUG updateTrip] trip.coverImage after save:",
+        trip.coverImage
+      );
+    } catch (saveError) {
+      if (req.file) {
+        await deleteFilesByAbsolutePath([req.file.path]);
+      }
+
+      throw saveError;
+    }
+
+    // Remove the old file only after a successful save, and only if it
+    // was actually replaced/cleared and was a local upload.
+    if (
+      previousCoverImage &&
+      previousCoverImage !== trip.coverImage &&
+      (req.file || req.body.removeCoverImage)
+    ) {
+      await deleteLocalUploadedFiles([previousCoverImage]);
+    }
+
     await trip.populate("createdBy", "name");
     await trip.populate("participants", "name");
 
@@ -157,6 +247,7 @@ const deleteTrip = async (req, res, next) => {
     }
 
     await deleteLocationsForTrip(trip._id);
+    await deleteLocalUploadedFiles([trip.coverImage]);
     await trip.deleteOne();
 
     res.status(204).send();

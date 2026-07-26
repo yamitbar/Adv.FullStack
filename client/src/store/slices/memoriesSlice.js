@@ -5,12 +5,8 @@ import {
 
 import api from "../../services/api";
 
-// Memories are domain data with several independent async operations
-// (fetch, create, upload images, edit, delete) that only ever live on
-// the Location Details page today, but follow the same Redux Toolkit
-// pattern already used for trips - kept in its own slice instead of
-// growing tripsSlice, since memories are conceptually a different
-// resource with their own loading/error states.
+// Own slice (not part of tripsSlice) since memories are a conceptually
+// different resource with their own loading/error states.
 
 const getErrorMessage = (error, fallbackMessage) => {
   const responseData = error?.response?.data;
@@ -84,13 +80,8 @@ export const uploadMemoryImages = createAsyncThunk(
         formData.append("images", file);
       });
 
-      // Do NOT set a Content-Type header here. When the request body is
-      // a FormData instance, the browser must compute the multipart
-      // boundary itself and put it in the Content-Type header - if we
-      // set "multipart/form-data" manually (without a boundary), the
-      // browser keeps our header as-is instead of adding one, and the
-      // request body becomes unparseable multipart data on the server.
-      // Axios already knows to leave FormData bodies alone.
+      // Do NOT set a Content-Type header - Axios computes the multipart
+      // boundary itself when the body is a FormData instance.
       const { data } = await api.post(
         `/memories/${memoryId}/images`,
         formData

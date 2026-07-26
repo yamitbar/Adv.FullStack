@@ -61,13 +61,9 @@ function MemoriesSection({ locationId }) {
     };
   }, [dispatch, locationId]);
 
-  // Memoized so a blob URL is created exactly once per selected file,
-  // not on every render (e.g. every keystroke in the textarea below,
-  // which re-renders this component but does not change selectedFiles).
-  // Without this, each render created a fresh, never-revoked object URL
-  // for the same files, and the <img> could briefly point at a URL that
-  // was already revoked by an earlier render's cleanup - showing a
-  // broken image (its alt text) in place of the thumbnail.
+  // Memoized so a blob URL is created once per selected file, not on
+  // every re-render (e.g. each keystroke in the textarea below) - otherwise
+  // an earlier render's cleanup could revoke the URL a later one still uses.
   const previewUrls = useMemo(
     () =>
       selectedFiles.map((file) =>

@@ -6,21 +6,8 @@ import {
 
 import "./ErrorBoundary.css";
 
-/**
- * Top-level React Error Boundary. Catches unexpected render/lifecycle
- * errors anywhere below it in the tree and shows a friendly fallback
- * instead of a blank white page.
- *
- * This is a different safety net from the app's normal API error
- * states (a failed fetch showing a `*-error-state` block with a retry
- * button, e.g. in MyTrips/TripDetails/LocationDetails) - those handle
- * expected, recoverable failures without ever unmounting the page.
- * This only fires for a genuine unexpected JavaScript error while
- * rendering, which those per-page states cannot catch.
- *
- * Must be a class component: `getDerivedStateFromError` and
- * `componentDidCatch` have no Hook equivalent in React yet.
- */
+// Catches unexpected render errors anywhere below it and shows a
+// friendly fallback. Must be a class component - no Hook equivalent yet.
 class ErrorBoundary extends Component {
   state = {
     hasError: false,
@@ -40,11 +27,8 @@ class ErrorBoundary extends Component {
     );
   }
 
-  // Full page navigations on purpose, not client-side router
-  // navigation: this component's own error state only clears on
-  // remount, so a normal client-side route change would leave the
-  // fallback showing even after the URL changed underneath it. A full
-  // navigation/reload guarantees a clean slate.
+  // Full page navigation on purpose - the error state only clears on
+  // remount, so a client-side route change would leave the fallback showing.
   handleReturnHome = () => {
     window.location.href = "/";
   };

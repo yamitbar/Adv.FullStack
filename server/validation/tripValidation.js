@@ -32,6 +32,10 @@ const updateTripSchema = Joi.object({
   startDate: Joi.date().optional(),
   endDate: Joi.date().optional(),
   coverImage: Joi.string().optional().allow(""),
+
+  // FormData sends this as "true"/"false"; Joi's `convert` option turns
+  // it into a real boolean. Not accepted on create - nothing to remove yet.
+  removeCoverImage: Joi.boolean().optional(),
 })
   .min(1)
   .custom(validateDateOrder)

@@ -1,11 +1,4 @@
-// Shared trip-membership check, used by every controller that needs to
-// decide whether the authenticated user may read or write trip, location,
-// or memory content. Previously duplicated identically in
-// locationController.js and memoryController.js - kept here as the single
-// source of truth instead.
-//
-// A user is a member of a trip if they created it or if they joined it
-// (participants array, populated via the invite-code join flow).
+// A user is a trip member if they created it or joined it via invite code.
 const isTripMember = (trip, userId) => {
   const isCreator =
     trip.createdBy.toString() === userId.toString();

@@ -136,11 +136,8 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // useCallback (rather than a plain function, unlike login/register/
-  // clearAuthError above) because it closes over `navigate`, a hook
-  // value - keeping it stable lets it be listed explicitly in the
-  // `value` useMemo's dependency array below without defeating that
-  // memoization on every render.
+  // useCallback so this stays stable in the `value` useMemo's deps below
+  // (it closes over `navigate`, unlike the plain functions above).
   const logout = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -149,20 +146,10 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setError(null);
 
-    // Navigate to /login in the same tick as the auth-state update
-    // above (React batches both, so the router re-renders once with
-    // the new location already in place). This matters: without an
-    // explicit navigate here, logging out while on a protected route
-    // (e.g. /trips/:id) left the URL unchanged, so ProtectedRoute
-    // re-rendered with isAuthenticated=false at that same URL and
-    // redirected to /login itself - stashing the just-abandoned route
-    // as location.state.from, indistinguishable from a genuine
-    // logged-out user trying to reach a protected page. The next
-    // person to log in on that same /login screen then inherited the
-    // previous user's route. Navigating here first means /login is
-    // already the current location by the time anything re-renders,
-    // so ProtectedRoute for the old route never gets a chance to run.
-    // No `state` is passed, so this /login entry starts clean.
+    // Navigate here explicitly (not just clearing auth state) so /login
+    // is already the URL before ProtectedRoute re-renders - otherwise it
+    // redirects from the old protected URL itself and stashes it as
+    // location.state.from, which the next person to log in would inherit.
     navigate("/login", { replace: true });
   }, [navigate]);
 

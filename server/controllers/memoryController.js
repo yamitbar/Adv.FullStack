@@ -296,13 +296,9 @@ const removeMemoryImage = async (req, res, next) => {
   }
 };
 
-// Upload images to an existing memory.
-//
-// Authorization already ran in the authorizeMemoryImageUpload middleware
-// (before Multer touched the disk), so req.memory is already the
-// verified, owned memory here. If saving to the database fails after
-// Multer wrote the files, the just-written files are removed so the
-// request never leaves orphan uploads behind.
+// Uploads images to an existing memory (already authorized and loaded
+// onto req.memory by authorizeMemoryImageUpload). Rolls back the
+// just-written files if the database save fails.
 const uploadMemoryImages = async (req, res, next) => {
   const memory = req.memory;
 

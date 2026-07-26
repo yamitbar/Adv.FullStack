@@ -33,3 +33,23 @@
   background: #eef5f0;
   color: #173229;
 }
+
+.address-autocomplete-status {
+  display: block;
+  margin-top: 0.45rem;
+  color: #78847e;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.address-autocomplete-hint {
+  display: block;
+  margin-top: 0.45rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(178, 137, 38, 0.3);
+  border-radius: 0.7rem;
+  background: rgba(178, 137, 38, 0.1);
+  color: #7a5b12;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}

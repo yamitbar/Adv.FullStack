@@ -17,10 +17,16 @@ const deleteMemoriesForLocation = async (locationId) => {
 };
 
 // Deletes every location that belongs to a trip, and all memories/files
-// that belong to those locations. Safe to call on a trip that has no
-// locations.
+// that belong to those locations, including each location's own cover
+// image. Safe to call on a trip that has no locations.
 const deleteLocationsForTrip = async (tripId) => {
   const locations = await Location.find({ trip: tripId });
+
+  const coverImagePaths = locations
+    .map((location) => location.coverImage)
+    .filter(Boolean);
+
+  await deleteLocalUploadedFiles(coverImagePaths);
 
   for (const location of locations) {
     // eslint-disable-next-line no-await-in-loop

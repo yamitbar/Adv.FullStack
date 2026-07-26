@@ -40,11 +40,8 @@ import { fetchTrips } from "../store/slices/tripsSlice";
 
 import "./Map.css";
 
-// Leaflet's default marker icon references image paths that don't
-// resolve correctly once bundled by Vite (a well-known Leaflet +
-// bundler issue, unrelated to react-leaflet itself). Re-pointing the
-// default icon at Vite-processed image imports fixes it. This runs
-// once at module load, not per-render or per-marker.
+// Leaflet's default marker icon paths don't resolve once bundled by
+// Vite - re-pointing it at Vite-processed image imports fixes it.
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
@@ -68,11 +65,9 @@ function formatDate(dateValue) {
   }).format(new Date(dateValue));
 }
 
-// Child of MapContainer (needs the map instance from context via
-// useMap, so it can't live in the parent component). Adjusts the
-// existing map's view whenever the visible marker set changes,
-// instead of recreating the MapContainer - MapContainer itself is
-// rendered once, with a stable key, for the lifetime of this page.
+// Child of MapContainer (needs the map instance via useMap). Adjusts
+// the existing map's view when the marker set changes, instead of
+// recreating MapContainer itself.
 function FitBoundsToMarkers({ locations }) {
   const map = useMap();
 
@@ -121,28 +116,15 @@ function Map() {
     useState("");
   const fetchedTripIdsRef = useRef("");
 
-  // Identifies the most recently *started* locations fetch, so a
-  // request that's been superseded by a newer one (because `trips`
-  // changed to a genuinely different set while the old request was
-  // still in flight) can recognize that and skip applying its result
-  // - without relying on an effect-cleanup "cancelled" flag, which
-  // React's Strict Mode flips on its synthetic dev-mode double-invoke
-  // even though `fetchedTripIdsRef` below already prevented a second
-  // real request from ever starting. That combination previously left
-  // `locationsLoading` stuck `true` forever: the one real request's
-  // completion handler saw a stale `cancelled === true` (set by Strict
-  // Mode's synthetic unmount, not a real one) and returned before ever
-  // calling setLocationsLoading(false), and no second request existed
-  // to clear it either. Comparing against this ref instead is
-  // unaffected by Strict Mode's synthetic mount/unmount/mount cycle,
-  // since nothing resets it except actually starting a new fetch.
+  // Identifies the most recently started locations fetch so a
+  // superseded request can skip applying its result. Used instead of an
+  // effect-cleanup "cancelled" flag, which React Strict Mode's
+  // synthetic dev-mode double-invoke previously caused to leave
+  // `locationsLoading` stuck true forever.
   const requestIdRef = useRef(0);
 
-  // True whenever this component is actually mounted (not Strict
-  // Mode's synthetic double-invoke - see the effect below, which
-  // re-asserts `true` on every real or synthetic mount and is only
-  // ever set `false` by a real unmount's cleanup). Guards against
-  // updating state after the page has genuinely been left.
+  // True only while genuinely mounted (not Strict Mode's synthetic
+  // double-invoke) - guards against updating state after leaving the page.
   const isMountedRef = useRef(true);
 
   const [selectedTripId, setSelectedTripId] =
@@ -161,14 +143,9 @@ function Map() {
     dispatch(fetchTrips());
   }, [dispatch]);
 
-  // Fetch every accessible trip's locations in parallel, using the
-  // same GET /trips/:tripId/locations endpoint TripDetails already
-  // uses - there is no bulk "all my locations" endpoint, so this is
-  // the smallest way to aggregate them without adding a duplicate
-  // API. Kept in local state rather than Redux's single
-  // `selectedTripLocations` slot, which is designed for one
-  // currently-viewed trip and would be overwritten by (and would
-  // itself overwrite) this page's multi-trip aggregation.
+  // Fetches every accessible trip's locations in parallel (no bulk "all
+  // my locations" endpoint exists). Kept in local state rather than
+  // Redux's single-trip `selectedTripLocations` slot.
   useEffect(() => {
     if (tripsLoading) {
       return;

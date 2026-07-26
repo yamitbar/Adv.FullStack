@@ -1,4 +1,3 @@
-// Import dependencies
 const express = require("express");
 const path = require("path");
 const helmet = require("helmet");
@@ -8,7 +7,6 @@ const {
 } = require("./middleware/rateLimiter");
 const cors = require("cors");
 
-// Import routes
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const tripRoutes = require("./routes/tripRoutes");
@@ -23,11 +21,17 @@ const {
   memoryRouter,
 } = require("./routes/memoryRoutes");
 
-// Import middleware
 const errorHandler = require("./middleware/errorHandler");
 
-// Create the Express app
 const app = express();
+
+// Trust exactly one reverse-proxy hop (Heroku/Render/Railway all sit
+// behind one). Required so express-rate-limit can read the real client
+// IP from X-Forwarded-For - without this it throws on every request
+// once deployed behind a proxy, since the header is present but Express
+// doesn't trust it. Safe locally too: with no proxy in front, there is
+// no X-Forwarded-For header for this setting to act on.
+app.set("trust proxy", 1);
 
 // Security headers
 app.use(helmet());
@@ -49,17 +53,10 @@ app.use(
 // Parse incoming JSON requests
 app.use(express.json());
 
-// Serve uploaded files as static files.
-//
-// Helmet's default Cross-Origin-Resource-Policy ("same-origin") blocks
-// a page on one origin from loading a resource served by another origin
-// - which is exactly the client/server split here (client on 5173,
-// server on 3000 in development; two different domains in most
-// deployments too). Without this override, every memory/location image
-// <img> tag fails to load (shows as broken) even though the file exists
-// and the URL is correct, because the browser refuses the cross-origin
-// resource load. Scoped to just this static route so the rest of the
-// app keeps Helmet's stricter default.
+// Serve uploaded files as static files. Helmet's default
+// Cross-Origin-Resource-Policy ("same-origin") would block the client
+// (a different origin) from loading these images, so it's relaxed to
+// "cross-origin" for just this route.
 app.use(
   "/uploads",
   express.static(path.join(__dirname, "uploads"), {
@@ -119,5 +116,4 @@ app.use((req, res, next) => {
 // Global error handler must always be registered last
 app.use(errorHandler);
 
-// Export the app
 module.exports = app;

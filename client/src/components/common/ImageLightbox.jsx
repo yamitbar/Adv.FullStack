@@ -6,18 +6,10 @@ import useBodyScrollLock from "../../hooks/useBodyScrollLock";
 
 import "./ImageLightbox.css";
 
-/**
- * Minimal full-size image viewer. Renders via a portal to
- * document.body (so its overlay always sits above the rest of the
- * page regardless of where the triggering thumbnail lives in the
- * DOM). Deliberately simple: no zoom, swipe, slideshow, or editing -
- * just a large view of one image with a dark backdrop.
- *
- * Closes on: the close button, the Escape key, or a click on the
- * backdrop itself. A click on the image does not close it (the click
- * handler that would close the overlay lives on the backdrop element,
- * and the image stops the click from bubbling to it).
- */
+// Minimal full-size image viewer, rendered via a portal to document.body
+// so its overlay always sits above the rest of the page. Closes on the
+// close button, Escape, or a backdrop click (not a click on the image
+// itself, which stops the click from bubbling to the backdrop).
 function ImageLightbox({ src, alt, onClose }) {
   const closeButtonRef = useRef(null);
   const previouslyFocusedRef = useRef(null);

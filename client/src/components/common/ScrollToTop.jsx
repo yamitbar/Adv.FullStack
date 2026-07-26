@@ -1,13 +1,9 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
-// Manual QA found that navigating between routes (e.g. Trip Details ->
-// Add Location) sometimes opens the new page at the previous page's
-// scroll position instead of the top. React Router does not reset
-// scroll on navigation by default, so this resets it once, globally,
-// on every pathname change.
-//
-// Renders nothing - mount it once at the routing level (see App.jsx).
+// React Router doesn't reset scroll position on navigation by default,
+// so this resets it once, globally, on every pathname change. Renders
+// nothing - mount it once at the routing level (see App.jsx).
 function ScrollToTop() {
   const { pathname } = useLocation();
 

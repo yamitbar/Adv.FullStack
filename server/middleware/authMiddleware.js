@@ -1,18 +1,18 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
+// Verifies the request's Bearer JWT and attaches the authenticated user
+// to req.user, rejecting the request otherwise.
 const protect = async (req, res, next) => {
   try {
     let token;
 
-    // Check if the Authorization header exists and starts with Bearer
     if (
       req.headers.authorization &&
       req.headers.authorization.startsWith("Bearer")) {
       token = req.headers.authorization.split(" ")[1];
     }
 
-    // Stop the request if no token was provided
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -20,10 +20,8 @@ const protect = async (req, res, next) => {
       });
     }
 
-    // Verify the token and decode its payload
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Find the logged-in user and attach it to the request object
     req.user = await User.findById(decoded.id).select("-password");
 
     if (!req.user) {
@@ -33,9 +31,8 @@ const protect = async (req, res, next) => {
       });
     }
 
-    // Continue to the next middleware or controller
     next();
-  } 
+  }
   catch (error) {
     return res.status(401).json({
       success: false,

@@ -13,11 +13,9 @@ const ensureUploadsDir = () => {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 };
 
-// Resolves a stored "/uploads/<filename>" path to an absolute file path
-// that is guaranteed to live inside the uploads directory. Returns null
-// for anything that is not a local upload - external http(s) URLs,
-// empty/missing values, or a path that does not point at this app's
-// uploads directory - so callers can safely skip it instead of throwing.
+// Resolves a stored "/uploads/<filename>" path to an absolute path
+// guaranteed to live inside the uploads directory, or null for anything
+// else (external URLs, empty values, etc.) so callers can skip it safely.
 const resolveUploadFilePath = (storedPath) => {
   if (typeof storedPath !== "string" || !storedPath.startsWith("/uploads/")) {
     return null;
@@ -46,12 +44,9 @@ const resolveUploadFilePath = (storedPath) => {
   return resolvedPath;
 };
 
-// Deletes local uploaded files referenced by the given stored paths.
-// - Non-local paths (http/https URLs, anything outside /uploads) are
-//   ignored.
-// - A missing file is ignored.
-// - This never throws - a media cleanup failure must never block or fail
-//   the database operation it is attached to.
+// Deletes local uploaded files for the given stored paths. Ignores
+// non-local paths and missing files, and never throws - a cleanup
+// failure must never block the database operation it's attached to.
 const deleteLocalUploadedFiles = async (storedPaths = []) => {
   const filePaths = (storedPaths || [])
     .map(resolveUploadFilePath)

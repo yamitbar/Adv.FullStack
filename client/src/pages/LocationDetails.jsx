@@ -1,6 +1,8 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -8,6 +10,7 @@ import {
   ArrowLeft,
   CalendarDays,
   CircleAlert,
+  Image,
   MapPin,
   Pencil,
   RefreshCw,
@@ -46,15 +49,18 @@ function formatDate(dateValue) {
 const emptyEditForm = {
   title: "",
   visitedAt: "",
-  coverImage: "",
 };
 
-// Internal Geoapify place metadata for the edit form's address field -
-// same shape/purpose as AddLocation.jsx's placeData. Seeded from the
-// loaded location whenever editing starts (see handleStartEdit), so
-// that saving without touching the address preserves the existing
-// placeName/lat/lng/placeId - including for older locations created
-// before this metadata existed, where these are simply null.
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+
+// Geoapify place metadata for the edit form - seeded from the loaded
+// location in handleStartEdit; see AddressAutocomplete.jsx.
 const emptyEditPlaceData = {
   address: "",
   placeName: "",
@@ -91,6 +97,12 @@ function LocationDetails() {
   );
   const [editError, setEditError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const [coverImageFile, setCoverImageFile] = useState(null);
+  const [removeExistingImage, setRemoveExistingImage] =
+    useState(false);
+
+  const fileInputRef = useRef(null);
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -141,13 +153,30 @@ function LocationDetails() {
     user?._id
   );
 
+  // Memoized so a blob URL is created exactly once per selected file,
+  // and revoked on unmount/replacement instead of leaking.
+  const newImagePreviewUrl = useMemo(
+    () =>
+      coverImageFile
+        ? URL.createObjectURL(coverImageFile)
+        : null,
+    [coverImageFile]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (newImagePreviewUrl) {
+        URL.revokeObjectURL(newImagePreviewUrl);
+      }
+    };
+  }, [newImagePreviewUrl]);
+
   const handleStartEdit = () => {
     setEditForm({
       title: location.title || "",
       visitedAt: toDateInputValue(
         location.visitedAt
       ),
-      coverImage: location.coverImage || "",
     });
 
     setEditPlaceData({
@@ -165,12 +194,16 @@ function LocationDetails() {
       isValid: true,
     });
 
+    setCoverImageFile(null);
+    setRemoveExistingImage(false);
     setEditError("");
     setIsEditing(true);
   };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
+    setCoverImageFile(null);
+    setRemoveExistingImage(false);
     setEditError("");
   };
 
@@ -181,6 +214,52 @@ function LocationDetails() {
       ...currentData,
       [event.target.name]: event.target.value,
     }));
+  };
+
+  const handlePickImage = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImageSelected = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    setEditError("");
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setEditError(
+        "Please choose a JPEG, PNG or WebP image."
+      );
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setEditError(
+        "Image is too large. Please choose a file under 5MB."
+      );
+      return;
+    }
+
+    setCoverImageFile(file);
+    setRemoveExistingImage(false);
+  };
+
+  // Clears a just-selected new file, reverting the preview back to the
+  // location's existing cover image (if it still has one).
+  const handleRemoveSelectedFile = () => {
+    setCoverImageFile(null);
+  };
+
+  // Explicitly clears the location's existing cover image. Only
+  // relevant when no new file is staged - the removeExistingImage flag
+  // is sent to the backend as removeCoverImage so it can delete the
+  // old file.
+  const handleClearExistingImage = () => {
+    setRemoveExistingImage(true);
   };
 
   const handleEditPlaceChange = (nextPlaceData) => {
@@ -205,39 +284,93 @@ function LocationDetails() {
 
     // Joi rejects an empty-string date, so an optional blank date is
     // simply left out of the request rather than sent as "".
-    const locationData = {
-      title: editForm.title.trim(),
-      address: editPlaceData.address.trim(),
-      coverImage: editForm.coverImage.trim(),
-    };
+    const locationFormData = new FormData();
+
+    locationFormData.append(
+      "title",
+      editForm.title.trim()
+    );
+
+    locationFormData.append(
+      "address",
+      editPlaceData.address.trim()
+    );
 
     if (editPlaceData.placeName) {
-      locationData.placeName = editPlaceData.placeName;
+      locationFormData.append(
+        "placeName",
+        editPlaceData.placeName
+      );
     }
 
-    if (typeof editPlaceData.lat === "number") {
-      locationData.lat = editPlaceData.lat;
-    }
+    // Always sent (even when empty) so the server can tell "no
+    // coordinates for this address" apart from "field left untouched"
+    // and clear a previously-saved lat/lng instead of leaving it stale.
+    locationFormData.append(
+      "lat",
+      typeof editPlaceData.lat === "number" ? editPlaceData.lat : ""
+    );
 
-    if (typeof editPlaceData.lng === "number") {
-      locationData.lng = editPlaceData.lng;
-    }
+    locationFormData.append(
+      "lng",
+      typeof editPlaceData.lng === "number" ? editPlaceData.lng : ""
+    );
 
     if (editPlaceData.placeId) {
-      locationData.placeId = editPlaceData.placeId;
+      locationFormData.append(
+        "placeId",
+        editPlaceData.placeId
+      );
     }
 
     if (editForm.visitedAt) {
-      locationData.visitedAt = editForm.visitedAt;
+      locationFormData.append(
+        "visitedAt",
+        editForm.visitedAt
+      );
+    }
+
+    if (coverImageFile) {
+      locationFormData.append(
+        "coverImage",
+        coverImageFile
+      );
+    } else if (removeExistingImage) {
+      locationFormData.append("removeCoverImage", "true");
     }
 
     setSaving(true);
     setEditError("");
 
+    // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed
+    // working end-to-end.
+    console.log(
+      "[DEBUG LocationDetails submit] coverImageFile:",
+      coverImageFile &&
+        `${coverImageFile.name} (${coverImageFile.size} bytes, ${coverImageFile.type})`
+    );
+    console.log(
+      "[DEBUG LocationDetails submit] removeExistingImage:",
+      removeExistingImage
+    );
+    console.log(
+      "[DEBUG LocationDetails submit] FormData has coverImage entry:",
+      locationFormData.has("coverImage")
+    );
+
     try {
+      // Do NOT set a Content-Type header - Axios computes the
+      // multipart boundary itself when the body is a FormData instance.
       const { data } = await api.put(
         `/locations/${locationId}`,
-        locationData
+        locationFormData
+      );
+
+      // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed
+      // working end-to-end.
+      console.log(
+        "[DEBUG LocationDetails submit] server response coverImage:",
+        data.location.coverImage
       );
 
       setLocation(data.location);
@@ -505,16 +638,51 @@ function LocationDetails() {
               />
             </label>
 
-            <label>
-              Cover image URL
+            <div className="location-edit-cover-field">
+              <span className="location-edit-cover-label">
+                Cover image
+              </span>
+
               <input
-                type="url"
-                name="coverImage"
-                value={editForm.coverImage}
-                onChange={handleEditChange}
-                placeholder="https://example.com/location.jpg"
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                hidden
+                onChange={handleImageSelected}
               />
-            </label>
+
+              <button
+                type="button"
+                className="button button-secondary location-edit-upload-button"
+                onClick={handlePickImage}
+              >
+                <Image size={17} />
+                {coverImageFile ? "Change image" : "Choose image"}
+              </button>
+            </div>
+
+            {(newImagePreviewUrl ||
+              (!removeExistingImage && imageUrl)) && (
+              <div className="location-edit-preview">
+                <img
+                  src={newImagePreviewUrl || imageUrl}
+                  alt="Location cover preview"
+                />
+
+                <button
+                  type="button"
+                  className="location-edit-preview-remove"
+                  aria-label="Remove image"
+                  onClick={
+                    newImagePreviewUrl
+                      ? handleRemoveSelectedFile
+                      : handleClearExistingImage
+                  }
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
 
             <div className="location-edit-actions">
               <button

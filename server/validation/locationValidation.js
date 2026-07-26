@@ -4,9 +4,8 @@ const Joi = require("joi");
 const createLocationSchema = Joi.object({
   title: Joi.string().trim().max(100).allow("").optional(),
 
-  // No longer collected from the user - the UI only captures address
-  // and an optional custom title. Kept optional (not stripped) so any
-  // caller that still sends it (e.g. api-tests.rest) doesn't break.
+  // Legacy field, no longer collected from the user - kept optional so
+  // callers that still send it (e.g. api-tests.rest) don't break.
   placeName: Joi.string().trim().allow("").optional(),
 
   address: Joi.string().trim().required().messages({
@@ -14,9 +13,8 @@ const createLocationSchema = Joi.object({
     "string.empty": "Address is required",
   }),
 
-  // Internal/non-user-facing fields. Not collected from the user in the
-  // MVP, so they must stay optional here - location creation must work
-  // without coordinates.
+  // Not collected from the user in the MVP - must stay optional so
+  // location creation works without coordinates.
   lat: Joi.number().min(-90).max(90).optional().messages({
     "number.base": "Latitude must be a number",
     "number.min": "Latitude must be between -90 and 90",
@@ -29,8 +27,7 @@ const createLocationSchema = Joi.object({
     "number.max": "Longitude must be between -180 and 180",
   }),
 
-  // Legacy, unused by the current (Geoapify-based) autocomplete - kept
-  // optional for backward compatibility, see Location.js.
+  // Legacy, unused by the current (Geoapify-based) autocomplete.
   googlePlaceId: Joi.string().trim().allow("").optional(),
 
   // Provider-neutral external place identifier (currently Geoapify's
@@ -46,20 +43,22 @@ const createLocationSchema = Joi.object({
 const updateLocationSchema = Joi.object({
   title: Joi.string().trim().max(100).allow("").optional(),
 
-  // No longer collected from the user - see createLocationSchema.
   placeName: Joi.string().trim().allow("").optional(),
 
   address: Joi.string().trim().min(1).optional().messages({
     "string.empty": "Address cannot be empty",
   }),
 
-  lat: Joi.number().min(-90).max(90).optional().messages({
+  // "" is accepted alongside a real number so the client can explicitly
+  // clear a previously-saved coordinate (e.g. address changed to free
+  // text with no resolved location) instead of leaving a stale value.
+  lat: Joi.number().min(-90).max(90).allow("").optional().messages({
     "number.base": "Latitude must be a number",
     "number.min": "Latitude must be between -90 and 90",
     "number.max": "Latitude must be between -90 and 90",
   }),
 
-  lng: Joi.number().min(-180).max(180).optional().messages({
+  lng: Joi.number().min(-180).max(180).allow("").optional().messages({
     "number.base": "Longitude must be a number",
     "number.min": "Longitude must be between -180 and 180",
     "number.max": "Longitude must be between -180 and 180",
@@ -70,6 +69,10 @@ const updateLocationSchema = Joi.object({
   placeId: Joi.string().trim().allow("").optional(),
 
   coverImage: Joi.string().trim().allow("").optional(),
+
+  // FormData sends this as "true"/"false"; Joi's `convert` option turns
+  // it into a real boolean. Not accepted on create - nothing to remove yet.
+  removeCoverImage: Joi.boolean().optional(),
 
   visitedAt: Joi.date().optional(),
 }).min(1).messages({

@@ -202,6 +202,50 @@
   padding-top: 0.5rem;
 }
 
+.location-edit-cover-field {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.location-edit-cover-label {
+  color: #18352a;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.location-edit-upload-button {
+  width: fit-content;
+}
+
+.location-edit-preview {
+  position: relative;
+  overflow: hidden;
+  height: 200px;
+  border-radius: 1.25rem;
+  background: #e7efeb;
+}
+
+.location-edit-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.location-edit-preview-remove {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(16, 38, 30, 0.65);
+  color: #ffffff;
+  cursor: pointer;
+}
+
 .location-meta-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

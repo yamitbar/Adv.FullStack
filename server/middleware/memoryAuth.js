@@ -1,12 +1,8 @@
 const Memory = require("../models/Memory");
 
-// Loads the target memory and confirms the authenticated user is allowed
-// to add images to it *before* Multer runs, so a request from someone who
-// doesn't own the memory never reaches disk in the first place. Attaches
-// the loaded memory to req.memory so the controller doesn't have to
-// re-fetch it.
-//
-// For this MVP only the memory creator may upload images to it.
+// Confirms the authenticated user owns the memory *before* Multer runs,
+// so an unauthorized request never reaches disk. Attaches the loaded
+// memory to req.memory so the controller doesn't have to re-fetch it.
 const authorizeMemoryImageUpload = async (req, res, next) => {
   try {
     const memory = await Memory.findById(req.params.id);
