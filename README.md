@@ -23,7 +23,7 @@ Built as a university full-stack final project on the MERN stack (MongoDB, Expre
 
 ## Tech stack
 
-**Backend:** Node.js, Express 5, MongoDB with Mongoose 9, JWT (`jsonwebtoken`), `bcrypt`, `joi` for validation, `multer` for file uploads, `helmet` and `express-rate-limit` for security, `cors`.
+**Backend:** Node.js, Express 5, MongoDB with Mongoose 9, JWT (`jsonwebtoken`), `bcrypt`, `joi` for validation, `multer` (in-memory) + Cloudinary for image storage, `helmet` and `express-rate-limit` for security, `cors`.
 
 **Frontend:** React 19 (Vite), React Router 7, Redux Toolkit, React Context (auth), Axios, `lucide-react` icons, Leaflet + React Leaflet with OpenStreetMap tiles (map), Geoapify Address Autocomplete API (address search).
 
@@ -56,16 +56,19 @@ Adv.FullStack/
 │   ├── .env.example
 │   └── vercel.json           Vercel SPA rewrite config
 ├── server/                  Express API
-│   ├── config/                db.js (Mongoose connection)
+│   ├── config/                db.js (Mongoose connection), cloudinary.js (Cloudinary SDK config)
 │   ├── controllers/           Route handlers, one file per resource
 │   ├── middleware/            auth, validation, upload, error handler, rate limiting
 │   ├── models/                Mongoose schemas (User, Trip, Location, Memory)
 │   ├── routes/                Express routers, one file per resource
-│   ├── utils/                 Shared helpers (cascade delete, media cleanup, trip membership, tokens)
+│   ├── tests/                 Automated backend smoke tests (Node's built-in test runner)
+│   ├── utils/                 Shared helpers (cascade delete, Cloudinary upload/delete, trip membership, tokens)
 │   ├── validation/            Joi schemas
-│   ├── uploads/                Uploaded memory images (gitignored)
+│   ├── uploads/                Unused at runtime now (kept only as a static-serving fallback; see Uploads and media), gitignored
 │   ├── .env.example
 │   └── Procfile               Heroku process declaration
+├── render.yaml               Render blueprint for the backend (server/)
+├── Pathly.postman_collection.json   Postman collection covering every endpoint
 └── api-tests.rest           REST Client scratch file for manual API testing
 ```
 
@@ -110,6 +113,9 @@ npm run preview           # serve the production build locally
 | `JWT_SECRET` | Secret used to sign/verify JWTs. Must be a long random string; never commit a real value. |
 | `JWT_EXPIRES_IN` | JWT lifetime, e.g. `1h`. |
 | `CLIENT_URL` | The frontend's origin, used for the CORS `origin` allowlist. Must exactly match where the frontend is actually running (`http://localhost:5173` in local dev). |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary account's cloud name. Required for trip/location cover images and memory photos to upload. |
+| `CLOUDINARY_API_KEY` | Cloudinary API key. |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret. Never commit a real value. |
 
 ### `client/.env`
 
@@ -170,7 +176,8 @@ All routes below except register/login require `Authorization: Bearer <token>`.
 | POST | `/api/auth/login` | Log in, get a JWT |
 | GET | `/api/auth/me` | Get the current user |
 | GET | `/api/users` | List all users (admin only) |
-| GET / PUT / DELETE | `/api/users/:id` | Read/update/delete a user (self or admin only) |
+| GET | `/api/users/:id` | Read a user (self or admin only) |
+| PUT | `/api/users/:id` | Update a user's name/email (self or admin only; any other field, e.g. `role` or `password`, is rejected outright, not silently dropped) |
 | POST | `/api/trips` | Create a trip |
 | GET | `/api/trips` | List the current user's trips |
 | GET / PUT / DELETE | `/api/trips/:id` | Read/update/delete a trip (member-only read, creator-only write) |
@@ -182,17 +189,21 @@ All routes below except register/login require `Authorization: Bearer <token>`.
 | GET | `/api/locations/:locationId/memories` | List a location's memories |
 | GET / PUT / DELETE | `/api/memories/:id` | Read/update/delete a memory |
 | POST | `/api/memories/:id/images` | Upload up to 5 images to a memory |
-| DELETE | `/api/memories/:id/images/:filename` | Remove one uploaded image from a memory |
+| DELETE | `/api/memories/:id/images/:index` | Remove one image from a memory, identified by its position in that memory's `images` array (`0` = first image) |
 
-The full request/response set (including negative-path examples like missing tokens and invalid data) is documented in `api-tests.rest` at the repo root — open it with the VS Code REST Client extension.
+There is no `DELETE /api/users/:id` route: no frontend flow ever triggers account deletion, and a real cascade delete of a user's trips, participant references, locations, memories, and images was judged too large/risky to add speculatively without an actual product requirement for it.
+
+The full request/response set (including negative-path examples like missing tokens and invalid data) is documented in `api-tests.rest` at the repo root (VS Code REST Client extension) and, as a Postman alternative, in `Pathly.postman_collection.json` at the repo root — import it into Postman, set `baseUrl` (defaults to `http://localhost:3000/api`), and run **Login** first: its test script automatically saves the returned JWT into the collection's `token` variable so every other request authenticates without manual copying. Creating a trip/location/memory likewise auto-saves `tripId`/`locationId`/`memoryId` for the requests that depend on them.
 
 ## Uploads and media
 
-Memory images are stored on the server's local disk (`server/uploads/`, created automatically on startup) via Multer, and served back as static files at `/uploads/<filename>`. The frontend never constructs upload URLs itself — it always goes through `resolveMediaUrl()` in `client/src/services/api.js`, which combines the API's origin with the stored relative path, so the same code works against `localhost` in development and a real deployed API URL in production.
+Trip cover images, location cover images, and memory photos are uploaded straight to **Cloudinary** — Multer (`server/middleware/upload.js`) holds each file in memory only long enough to stream it to Cloudinary (`server/utils/cloudinaryUpload.js`); nothing is ever written to the server's local disk. Each document stores the Cloudinary `secure_url` in the same field the frontend already reads (`coverImage` on Trip/Location, each entry of `images` on Memory), plus a parallel `public_id` field used only by the backend to replace/delete the asset later (`coverImagePublicId` on Trip/Location, `imagePublicIds` on Memory, same order as `images`). Because `resolveMediaUrl()` in `client/src/services/api.js` already passes absolute `https://` URLs through unchanged, the frontend needed no changes to display these images.
 
-Only `image/jpeg`, `image/png`, and `image/webp` are accepted; uploads are capped at 5MB per file and 5 files per request, and any files written to disk during a request that ultimately fails validation are rolled back rather than left orphaned. Deleting a memory or a location/trip that owns memories removes their image files from disk, not just their database records.
+Only `image/jpeg`, `image/png`, and `image/webp` are accepted; uploads are capped at 5MB per file and 5 files per request. The upload to Cloudinary only happens *after* Joi validation succeeds, so a request that fails validation never creates a Cloudinary asset in the first place — nothing to roll back. If the database write fails *after* a successful Cloudinary upload (e.g. replacing a cover image), the just-uploaded asset is deleted from Cloudinary so it's never left orphaned with no matching record. Deleting a trip/location cascades to every location/memory under it and destroys every Cloudinary asset they reference, not just their database records.
 
-**Note on deployment:** Heroku's filesystem is ephemeral — files written to `server/uploads/` will not survive a dyno restart or redeploy. This is fine for a live class demo but not for long-term storage; see Known Limitations.
+`server/uploads/` and its static-serving route in `server/app.js` are left in place but effectively unused now — nothing writes to that folder anymore, so it stays empty on a fresh deploy. Removing it entirely was judged an unnecessary extra change this close to submission.
+
+**Note on Heroku/Render/Railway:** since media now lives on Cloudinary rather than the backend's local disk, an ephemeral filesystem (which Heroku/Render/Railway all have) is no longer a concern for uploaded images.
 
 ## State management
 
@@ -205,12 +216,12 @@ Both are active in the same happy path: `ProtectedRoute` and the navbar read `Au
 
 - Passwords hashed with bcrypt; never returned in any API response.
 - JWT-based auth on every protected route; `protect` middleware rejects missing/invalid/expired tokens and tokens for deleted users.
-- All request bodies validated with Joi (`stripUnknown: true`), so unexpected fields (like a spoofed `role` or raw coordinates) are silently dropped rather than trusted.
+- All request bodies validated with Joi (`stripUnknown: true` by default), so unexpected fields (like raw coordinates) are silently dropped rather than trusted. `PUT /api/users/:id` overrides this to `stripUnknown: false`: it accepts only `name`/`email`, and any other field (a spoofed `role`, `password`, `_id`, etc.) makes the whole request fail with 400 instead of being quietly dropped.
 - Authorization checked on every read and write, not just writes — trip membership is required to view a trip's locations/memories, and only a resource's own creator can edit or delete it.
 - `helmet` (`server/app.js`) sets standard security headers (e.g. `X-Content-Type-Options`, `X-Frame-Options`/frame-ancestors via CSP, `Strict-Transport-Security`) on every response. The `/uploads` static route specifically overrides Helmet's default `Cross-Origin-Resource-Policy` (`same-origin`) to `cross-origin`, since uploaded images are legitimately requested from a different origin (the deployed frontend) than the one serving them — without that override every memory/location image would fail to load.
 - `express-rate-limit` (`server/middleware/rateLimiter.js`) applies a general limiter to all of `/api` (100 requests/15 min in production, a much looser 1000/15 min in development so normal manual QA and map/location loading never trips it) and a stricter, dedicated limiter on `POST /api/auth/login` and `POST /api/auth/register` specifically (10 requests/15 min in production) to slow down credential brute-forcing. Both return a consistent `{ success: false, message }` JSON body, not an HTML error page, and don't apply to `GET /api/auth/me`.
 - File uploads restricted by MIME type, size, and count; upload authorization runs *before* Multer writes anything to disk.
-- Secrets (`JWT_SECRET`, `MONGO_URI`) live only in untracked `.env` files; `.gitignore` excludes `.env`, `uploads/`, `node_modules/`, and `dist/`.
+- Secrets (`JWT_SECRET`, `MONGO_URI`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`) live only in untracked `.env` files; `.gitignore` excludes `.env`, `uploads/`, `node_modules/`, and `dist/`.
 - `app.set("trust proxy", 1)` (`server/app.js`) so `express-rate-limit` reads the real client IP from `X-Forwarded-For` when deployed behind Heroku/Render/Railway's reverse proxy, instead of misidentifying every request as coming from the proxy itself.
 
 ## Frontend resilience
@@ -221,8 +232,7 @@ Both are active in the same happy path: `ProtectedRoute` and the navbar read `Au
 
 ## Known limitations
 
-- Uploaded images are stored on local disk, which does not persist across Heroku dyno restarts/redeploys (see Uploads and media above).
-- No automated test suite (unit/integration tests) exists yet — verification has been manual/exploratory (see Testing section).
+- Automated test coverage is a minimal smoke suite (`server/tests/`), not a comprehensive unit/integration suite — see Testing section for exactly what it does and doesn't cover.
 - The map shows markers only for locations with saved coordinates - locations created without selecting an address suggestion (including everything created before this feature existed) don't appear on it, though they remain fully usable elsewhere.
 - No marker clustering - fine at the current expected scale (a personal/small-group travel journal), but a large number of markers close together would visually overlap.
 - No directions, routes between places, live GPS/current-location, weather, or place photos/ratings from external APIs.
@@ -231,10 +241,9 @@ Both are active in the same happy path: `ProtectedRoute` and the navbar read `Au
 
 ## Future improvements
 
-- Move uploaded images to persistent object storage (e.g. S3-compatible bucket) so they survive redeploys.
 - Marker clustering on the map if the number of locations in a trip grows large enough to make individual markers hard to distinguish.
 - A profile/statistics page (out of scope for this MVP; see Known limitations).
-- Add automated backend (Jest/Supertest) and frontend (Vitest/RTL) tests.
+- Expand automated test coverage beyond the current smoke suite (more edge cases, a real integration suite against an in-memory or Dockerized MongoDB, frontend tests with Vitest/RTL).
 - Add pagination for trips/locations/memories lists as data volume grows.
 
 ## Deployment
@@ -257,11 +266,11 @@ heroku buildpacks:add -a <app-name> https://github.com/lstoll/heroku-buildpack-m
 heroku config:set -a <app-name> APP_BASE=server
 ```
 
-Either way, set these Heroku config vars before deploying: `MONGO_URI` (an Atlas connection string — Heroku dynos can't reach a laptop's local MongoDB), `JWT_SECRET`, `JWT_EXPIRES_IN`, `CLIENT_URL` (the deployed frontend's real origin), and `NODE_ENV=production`. Do **not** set `PORT` — Heroku injects it automatically, and `server.js` already reads `process.env.PORT`.
+Either way, set these Heroku config vars before deploying: `MONGO_URI` (an Atlas connection string — Heroku dynos can't reach a laptop's local MongoDB), `JWT_SECRET`, `JWT_EXPIRES_IN`, `CLIENT_URL` (the deployed frontend's real origin), `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, and `NODE_ENV=production`. Do **not** set `PORT` — Heroku injects it automatically, and `server.js` already reads `process.env.PORT`.
 
 `server/Procfile` (`web: node server.js`) and `server/package.json`'s `engines.node` field are already in place for Heroku's Node buildpack. The `/` route (`GET /`) returns a simple 200 text response and can be used as a health check. `server/app.js` also sets `app.set("trust proxy", 1)`, required for `express-rate-limit` to read the real client IP through any of these platforms' reverse proxy — without it, every API request would fail once deployed.
 
-**Render or Railway instead of Heroku:** either works with the same `server/` root directory, `MONGO_URI`/`JWT_SECRET`/`JWT_EXPIRES_IN`/`CLIENT_URL`/`NODE_ENV=production` config vars, `npm install` as the build command, and `node server.js` (or `npm start`) as the start/run command — `server/Procfile` isn't read by either, but nothing else changes.
+**Render or Railway instead of Heroku:** either works with the same `server/` root directory, the same config vars as above (`MONGO_URI`/`JWT_SECRET`/`JWT_EXPIRES_IN`/`CLIENT_URL`/`CLOUDINARY_CLOUD_NAME`/`CLOUDINARY_API_KEY`/`CLOUDINARY_API_SECRET`/`NODE_ENV=production`), `npm install` as the build command, and `node server.js` (or `npm start`) as the start/run command — `server/Procfile` isn't read by either, but nothing else changes. A ready-to-use `render.yaml` blueprint is included at the repo root: in Render, "New +" → "Blueprint" and point it at this repo; it declares the web service (root directory `server/`, build/start commands, health check path `/`) and lists every required env var (secrets marked `sync: false` so Render prompts for them in the dashboard instead of reading a value from the file).
 
 ### Frontend (Vercel or Netlify)
 
@@ -271,13 +280,15 @@ SPA fallback routing (so refreshing `/trips/:id` doesn't 404) is already configu
 
 ## Testing / manual verification
 
-There is no automated test suite. What follows is deliberately split into three categories, because they carry very different levels of confidence — do not read "runtime API verification" as the same thing as "browser QA passed."
+Verification comes from four different sources, each with a different level of confidence. They are kept separate on purpose — none of them substitutes for another.
 
-**Runtime API verification (real database, real HTTP requests).** The 32 requests in `api-tests.rest` were manually executed successfully by the project owner against a real local MongoDB instance and a real running server — this is manual execution via the VS Code REST Client extension, not an automated test run (there is no test runner or CI involved). That pass uncovered one genuine bug: `server/middleware/upload.js` was missing `const path = require("path")`, so every image upload failed at runtime with `ReferenceError: path is not defined` — an error invisible to static syntax checks, only reachable by actually calling the upload endpoint. That fix is committed. This round of testing was performed locally by the project owner, not witnessed or independently reproduced inside this assistant's sandbox (which cannot reach a local MongoDB instance — see `docs/development-notes/batch-4-runtime-delivery-and-docs.md` for why).
+**Automated backend smoke tests (`server/tests/`, run with `npm test`).** Uses Node's built-in test runner (`node:test`) — no extra dependencies. The tests boot the *real* `server/app.js` (real Express wiring, real Joi schemas, real JWT/bcrypt, real middleware order) on a real HTTP server, but replace the four Mongoose model files with small in-memory fakes so no real MongoDB is touched. This was necessary, not just a design choice: in the sandbox this project was finished in, `require("mongoose")` itself hangs indefinitely (confirmed with `timeout 10 node -e "require('mongoose')"`, which exits 124) — a pre-existing environment limitation, unrelated to this project's code, that would block any test touching Mongoose directly. `server/app.js` never requires Mongoose itself (only `server.js`/`config/db.js` do), so stubbing just the four model files keeps the real route/controller/middleware code under test. All 9 tests pass as of this writing: health check, a protected route rejecting a missing token, Joi validation failure on register, wrong-password login, correct-password login, trip-update authorization (rejecting a non-owner), upload-cleanup-on-validation-failure (asserting Cloudinary is never even called when Joi rejects the request first), Helmet security headers being present, and a full memory-image upload-then-remove round trip through the Cloudinary-backed endpoints. This is a smoke suite, not full coverage — it does not touch a real database and does not replace manual QA.
 
-**Static verification (reproducible by anyone, anytime).** `node --check` on every backend file, `npm run lint` (oxlint), and `npm run build` (Vite) on the frontend. These passed as of the commit before the comment-cleanup/address-hint/deployment-readiness changes; `node --check` was re-run after those changes and still passes, but `npm run lint`/`npm run build` could not be re-run in this assistant's sandbox (both oxlint's and Vite/esbuild's native bindings crash here - a pre-existing sandbox limitation, not something the changes caused) and should be re-run locally before submitting.
+**Runtime API verification (real database, real HTTP requests) — from the previous work session.** The 32 requests in `api-tests.rest` were manually executed successfully by the project owner against a real local MongoDB instance and a real running server via the VS Code REST Client extension. That pass caught a real bug (a missing `require("path")` in `server/middleware/upload.js`) that static checks alone could not have found. A Postman alternative (`Pathly.postman_collection.json`) now exists too, covering the same endpoints plus the updated user-update and Cloudinary-backed media routes, but it has not itself been executed against a live server (no MongoDB/Cloudinary credentials are available in this sandbox) — re-run it once real credentials exist, before demoing.
 
-**Manual browser QA: core flows confirmed by the project owner.** Clicking through the actual UI in a real browser has confirmed: post-login navigation to the Home page (with no leakage of a previous user's route after logout), Geoapify address autocomplete on Add/Edit Location, the `/map` page loading and rendering correctly, markers and their popups, the trip filter dropdown, the memory image lightbox, the image delete-X control (correctly centered), and the other existing core flows (register/login, trip and location CRUD, join-by-invite-code, authorization differences between creator and participant). This is manual click-through verification by the project owner, not an automated test run. `MANUAL_TEST_PLAN.md` still lists the full checklist (including less-central paths like the 404 page and mobile-width layouts specifically) for anyone who wants to re-verify or extend coverage before a live demo.
+**Static verification.** `node --check` passes on all 37 backend `.js` files (re-verified after every change in this round, including the Cloudinary migration). On the frontend, `npm run lint` (oxlint) and `npm run build` (Vite) both crash with `Bus error (core dumped)` in this sandbox — a native-binary crash confirmed reproducible on demand and unrelated to any code in this project (the same crash happens on an unmodified checkout). Brace/paren/bracket-balance checks were used as a substitute static check on every edited `.jsx`/`.js` file in the client. **Both commands should be re-run in a normal local environment before submitting** — they were not able to confirm a clean lint/build pass here.
+
+**Manual browser QA from the previous work session.** Clicking through the actual UI in a real browser confirmed: post-login navigation, Geoapify address autocomplete, the `/map` page and its markers/popups/trip filter, the memory image lightbox and delete-X control, and the core CRUD/authorization/invite-code flows. This round of work did not repeat that browser QA (no browser or live backend is available in this sandbox) — anything touched by this round's changes (Cloudinary-backed image upload/replace/delete, the user-update validation, the memory image remove-by-index endpoint) still needs a real click-through pass before the final demo.
 
 ## Author
 

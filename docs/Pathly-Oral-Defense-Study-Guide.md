@@ -180,11 +180,15 @@ server/
 │   ├── generateToken.js         (signs a JWT)
 │   ├── generateInviteCode.js    (random "PTR-XXXX" code)
 │   ├── tripMembership.js        (isTripMember — single source of truth)
-│   ├── cascadeDelete.js         (deleteLocationsForTrip, deleteMemoriesForLocation)
-│   └── mediaCleanup.js          (safe file deletion in server/uploads/)
-├── uploads/                    ← Uploaded memory images (gitignored, created at runtime)
-└── .env / .env.example          ← MONGO_URI, JWT_SECRET, JWT_EXPIRES_IN, PORT, CLIENT_URL
+│   ├── cascadeDelete.js         (deleteLocationsForTrip, deleteMemoriesForLocation — now destroy Cloudinary assets, not local files)
+│   ├── mediaCleanup.js          (legacy local-file helpers, unused now that uploads go to Cloudinary — kept as a defense-in-depth no-op)
+│   └── cloudinaryUpload.js      (uploadBufferToCloudinary, destroyCloudinaryAsset(s) — the real media storage now)
+├── config/cloudinary.js        ← Cloudinary SDK config (reads CLOUDINARY_* env vars)
+├── uploads/                    ← No longer written to at runtime (kept only as an empty static-serving fallback), gitignored
+└── .env / .env.example          ← MONGO_URI, JWT_SECRET, JWT_EXPIRES_IN, PORT, CLIENT_URL, CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
 ```
+
+> ⚠️ **Updated after the deployment-prep pass:** media storage moved from local disk to Cloudinary (see the dedicated section below). Every mention of "written to `server/uploads/`" elsewhere in this guide describes the *original* implementation and is superseded by that section.
 
 ### Why this exact separation? (MVC, explained with your files)
 
@@ -464,9 +468,11 @@ memoryController.createMemory:
 201 { memory }  → memoriesSlice: items.unshift(memory)
 ```
 
-> 🟦 **Why is `images` rejected by `createMemorySchema`?** So a JSON client can never sneak arbitrary path strings into `images` directly. Images are **only** ever added through the dedicated Multer upload endpoint below, which writes real files to disk first.
+> 🟦 **Why is `images` rejected by `createMemorySchema`?** So a JSON client can never sneak arbitrary path strings into `images` directly. Images are **only** ever added through the dedicated Multer upload endpoint below, which uploads to Cloudinary itself rather than trusting a client-supplied path.
 
 ## 3.9 Upload Image (to an existing Memory)
+
+> ⚠️ **Updated after the deployment-prep pass:** the diagram below reflects the current Cloudinary-backed flow. Multer now uses `memoryStorage` (in-memory buffer, no disk write); the controller streams that buffer to Cloudinary and stores both the returned URL and `public_id`.
 
 ```mermaid
 sequenceDiagram
@@ -474,40 +480,45 @@ sequenceDiagram
     participant Slice as memoriesSlice.js
     participant Route as memoryRoutes.js
     participant Auth as memoryAuth.js (authorizeMemoryImageUpload)
-    participant Multer as upload.js (uploadImages)
+    participant Multer as upload.js (uploadImages, memoryStorage)
     participant Ctrl as memoryController.uploadMemoryImages
-    participant Disk as server/uploads/
+    participant CDN as Cloudinary
 
     UI->>Slice: dispatch(uploadMemoryImages({memoryId, files}))
     Slice->>Route: POST /memories/:id/images (FormData, NOT JSON)
     Route->>Auth: protect, then authorizeMemoryImageUpload
-    Note over Auth: Loads Memory BEFORE Multer touches disk.<br/>Rejects (403) if not the memory's creator.
+    Note over Auth: Loads Memory BEFORE Multer even parses the file.<br/>Rejects (403) if not the memory's creator.
     Auth->>Multer: req.memory attached, next()
-    Multer->>Disk: writes files, generates unique name Date.now()-random.ext
-    Multer->>Ctrl: req.files populated
-    Ctrl->>Ctrl: memory.images.push(...imagePaths); memory.save()
+    Multer->>Ctrl: req.files populated (in-memory buffers, nothing on disk)
+    Ctrl->>CDN: uploadBufferToCloudinary(buffer) per file
+    CDN-->>Ctrl: { url, publicId } per file
+    Ctrl->>Ctrl: memory.images.push(...urls); memory.imagePublicIds.push(...publicIds); memory.save()
     alt save fails
-        Ctrl->>Disk: deleteFilesByAbsolutePath(req.files) - rollback orphan files
+        Ctrl->>CDN: destroyCloudinaryAssets(publicIds) - rollback just-uploaded assets
     end
     Ctrl-->>UI: 200 { images, memory }
 ```
 
-> 🟥 **Common Mistake:** Assuming authorization happens *inside* the controller here. It's the opposite — `authorizeMemoryImageUpload` (in `middleware/memoryAuth.js`) runs **before** Multer even parses the request, specifically so an unauthorized request can never cause a single byte to be written to disk.
+> 🟥 **Common Mistake:** Assuming authorization happens *inside* the controller here. It's the opposite — `authorizeMemoryImageUpload` (in `middleware/memoryAuth.js`) runs **before** Multer even parses the request, specifically so an unauthorized request can never cause anything to be uploaded to Cloudinary.
 
 ## 3.10 Delete Image
 
+> ⚠️ **Updated after the deployment-prep pass:** identification changed from filename to array index, and deletion targets Cloudinary instead of local disk.
+
 ```
-MemoryCard.jsx → confirm() → dispatch(removeMemoryImage({memoryId, filename}))
-  ↓ DELETE /memories/:id/images/:filename
+MemoryCard.jsx → confirm() → dispatch(removeMemoryImage({memoryId, index}))
+  ↓ DELETE /memories/:id/images/:index
   ↓ protect → memoryController.removeMemoryImage
-  ↓ path.basename(filename) — strips any "../" traversal attempt, rejects if it changes the string
+  ↓ validates index is an integer within memory.images bounds (400 otherwise)
   ↓ confirms creator ownership (403 otherwise)
-  ↓ memory.images.splice(index,1); memory.save()   ← DB updated FIRST
-  ↓ deleteLocalUploadedFiles([storedPath])           ← file deleted from disk AFTER save succeeds
+  ↓ memory.images.splice(index,1); memory.imagePublicIds.splice(index,1); memory.save()   ← DB updated FIRST
+  ↓ destroyCloudinaryAsset(publicId)                  ← Cloudinary asset removed AFTER save succeeds
   ↓ 200 { memory }
 ```
 
-> 🟦 **Why DB-first, then disk?** If the database save fails, no reason to have already deleted the file — the response never claims success while the underlying data is inconsistent. A failed disk delete afterward is only logged, never fails the request (the DB is the source of truth for what a memory "has").
+> 🟦 **Why DB-first, then Cloudinary?** If the database save fails, no reason to have already deleted the asset — the response never claims success while the underlying data is inconsistent. A failed Cloudinary delete afterward is only logged, never fails the request (the DB is the source of truth for what a memory "has").
+>
+> 🟦 **Why index instead of filename?** Cloudinary `public_id`s can contain `/` (folder paths), so they can't safely be used as a single route-param segment the way a flat generated filename could. The array position is stable and unambiguous within one memory document.
 
 ## 3.11 Logout
 
@@ -689,7 +700,17 @@ Already summarized in the existing project cheat sheet, and it's important enoug
 
 **Definition:** Express middleware for parsing `multipart/form-data` (file uploads), since `express.json()` cannot parse binary file bodies.
 
-**Where:** `middleware/upload.js` — `multer.diskStorage` writes to `server/uploads/`, filenames are `Date.now()-<random>.ext`; `fileFilter` only allows JPEG/PNG/WebP; `limits: { fileSize: 5MB, files: 5 }`.
+**Where:** `middleware/upload.js` — `multer.memoryStorage()` holds each file as an in-memory `Buffer` (`req.file.buffer` / `req.files[].buffer`); `fileFilter` only allows JPEG/PNG/WebP; `limits: { fileSize: 5MB, files: 5 }`.
+
+**Updated in the deployment-prep pass — media storage moved to Cloudinary:**
+
+- Multer used to write to `server/uploads/` via `diskStorage`. It now uses `memoryStorage`: nothing touches the local disk at all, which matters because that disk is ephemeral on Render/Railway/Heroku.
+- After Joi validation passes, the controller (`tripController`/`locationController`/`memoryController`) calls `uploadBufferToCloudinary(buffer, folder)` (`utils/cloudinaryUpload.js`), which streams the buffer to Cloudinary via `cloudinary.uploader.upload_stream` and returns `{ url, publicId }`.
+- The document stores `url` in the same field the frontend already read (`coverImage` on Trip/Location, each entry of `images` on Memory) — no frontend changes needed there, since `resolveMediaUrl()` already passes absolute `https://` URLs through unchanged. The `publicId` is stored in a new parallel field (`coverImagePublicId` on Trip/Location, `imagePublicIds` on Memory, same order as `images`) used only server-side to replace/delete the asset later.
+- **Ordering matters for the orphan-cleanup story:** because the actual Cloudinary upload happens *inside the controller, after* Joi validation, a request that fails Joi validation never creates a Cloudinary asset in the first place — there is nothing to roll back. If the *database* write fails right after a successful Cloudinary upload (replacing a cover image, or creating a Trip/Location/Memory), the controller calls `destroyCloudinaryAsset(publicId)` in the `catch` block so the just-uploaded asset isn't left orphaned with no matching document.
+- Deleting a Trip/Location cascades through `utils/cascadeDelete.js`, which now calls `destroyCloudinaryAssets(publicIds)` instead of deleting local files.
+- The one route contract change this required: removing a single memory image used to be `DELETE /memories/:id/images/:filename` (Multer's generated filename). Cloudinary `public_id`s can contain `/` (folder paths), so they can't safely be a route param the same way — the route is now `DELETE /memories/:id/images/:index`, identifying the image by its position in that memory's `images` array (`0` = first). The frontend (`MemoryCard.jsx`, `memoriesSlice.js`) was updated to match.
+- `server/utils/mediaCleanup.js` (the original local-file helpers) is left in place, unused, as a harmless defense-in-depth no-op in `middleware/validate.js` — see the "Common Mistake" callout in 5.x below for why that's safe.
 
 ## 4.17 Global Error Handler
 
@@ -773,7 +794,7 @@ Already summarized in the existing project cheat sheet, and it's important enoug
 | Where is the password **hashed**? | `server/models/User.js` | `pre("save")` hook, `bcrypt.hash(password, 10)` |
 | Where is the password **compared** at login? | `server/controllers/authController.js` (`login`) | `bcrypt.compare(password, user.password)` |
 | Where are trips **saved**? | `server/controllers/tripController.js` (`createTrip`) → `Trip.create(...)` | Model: `server/models/Trip.js` |
-| Where are images **uploaded to disk**? | `server/middleware/upload.js` | `multer.diskStorage`, destination `server/uploads/` |
+| Where are images **uploaded**? | `server/middleware/upload.js` (Multer, `memoryStorage`) → `server/utils/cloudinaryUpload.js` | Held in memory, then streamed to Cloudinary; nothing touches local disk |
 | Where is an image upload **authorized**? | `server/middleware/memoryAuth.js` (`authorizeMemoryImageUpload`) | Runs *before* Multer |
 | Where are coordinates **stored**? | `server/models/Location.js` | `lat`, `lng` (Number, optional) |
 | Where are coordinates **captured**? | `client/src/components/locations/AddressAutocomplete.jsx` | Only on selecting a Geoapify suggestion |
@@ -785,12 +806,12 @@ Already summarized in the existing project cheat sheet, and it's important enoug
 | Where is **Join Trip** implemented? | Backend: `tripController.joinTrip` + `tripRoutes.js` `POST /join` · Frontend: `JoinTripModal.jsx` + `tripsSlice.js` (`joinTrip` thunk) | |
 | Where is the **invite code generated**? | `server/utils/generateInviteCode.js` | Used as `Trip.js` schema's `inviteCode` default |
 | Where is **cascade delete** implemented? | `server/utils/cascadeDelete.js` | `deleteLocationsForTrip`, `deleteMemoriesForLocation` |
-| Where are orphan **files cleaned up**? | `server/utils/mediaCleanup.js` | `deleteLocalUploadedFiles`, `deleteFilesByAbsolutePath` |
+| Where are orphan **Cloudinary assets cleaned up**? | `server/utils/cloudinaryUpload.js` | `destroyCloudinaryAsset(s)`, called from controller `catch` blocks and `cascadeDelete.js` |
 | Where is the **global error handler**? | `server/middleware/errorHandler.js` | Registered last in `app.js` |
 | Where is **rate limiting** configured? | `server/middleware/rateLimiter.js` | Applied in `app.js` |
 | Where does the client attach the **JWT header**? | `client/src/services/api.js` | Axios request interceptor |
 | Where does the client handle a **401**? | `client/src/services/api.js` | Response interceptor — clears storage, redirects to `/login` |
-| Where does the client build an **image URL**? | `client/src/services/api.js` (`resolveMediaUrl`) | Combines `/uploads/<file>` with the API's origin |
+| Where does the client build an **image URL**? | `client/src/services/api.js` (`resolveMediaUrl`) | Passes an absolute Cloudinary `https://` URL through unchanged; still combines a relative `/uploads/<file>` path with the API's origin for any legacy value |
 | Where is the **map rendered**? | `client/src/pages/Map.jsx` | `react-leaflet`'s `MapContainer`/`TileLayer`/`Marker` |
 | Where is **address autocomplete** called? | `client/src/services/geoapify.js` | Direct browser → Geoapify, no backend proxy |
 | Where is a **route protected** (React Router)? | `client/src/App.jsx` | Wrapping element `<ProtectedRoute>` |
@@ -849,7 +870,7 @@ Already summarized in the existing project cheat sheet, and it's important enoug
 |---|---|---|
 | Request format | `multipart/form-data` | Plain JSON with a giant string field |
 | File size overhead | None | ~33% larger (Base64 encoding overhead) |
-| Where files live | Written to disk (`server/uploads/`) via streaming | Would need decoding + writing manually |
+| Where files live | Held in memory briefly, then streamed to Cloudinary | Would need decoding + uploading manually |
 | Validation | `fileFilter` on real MIME type, `limits` on size/count | Would need manual size/type checks |
 
 ## 6.6 Backend Validation vs Frontend Validation
@@ -890,7 +911,7 @@ A: Authentication = `protect` middleware, same on every route: "is this a valid,
 A: `googlePlaceId` is a leftover, optional field from an earlier, never-merged Google Places integration attempt — kept only so any pre-existing document that happened to have one wouldn't break. `placeId` is the current, provider-neutral field populated by Geoapify's Address Autocomplete. New code never writes `googlePlaceId`.
 
 **Q7: What happens if you delete a trip that has locations and memories with uploaded photos?**
-A: `tripController.deleteTrip` calls `deleteLocationsForTrip(trip._id)` (`utils/cascadeDelete.js`), which loops every location under that trip, calls `deleteMemoriesForLocation` for each (which deletes all their memories *and* their uploaded image files via `mediaCleanup.js`), then deletes the locations themselves, and finally the trip. Nothing is left orphaned — no dangling documents, no dangling files.
+A: `tripController.deleteTrip` calls `deleteLocationsForTrip(trip._id)` (`utils/cascadeDelete.js`), which loops every location under that trip, calls `deleteMemoriesForLocation` for each (which deletes all their memories *and* destroys their Cloudinary images via `utils/cloudinaryUpload.js`), then deletes the locations themselves, and finally the trip. Nothing is left orphaned — no dangling documents, no dangling Cloudinary assets.
 
 **Q8: Why is there a separate, stricter rate limiter for `/api/auth/login` and `/api/auth/register`?**
 A: These are the two endpoints a real attacker would actually script against — credential brute-forcing and spam account creation. The general `apiLimiter` (100 req/15min in production) is generous enough for normal browsing but far too loose to stop a password-guessing script; `authLimiter` caps just those two routes at 10 req/15min in production.
@@ -901,19 +922,19 @@ A: `AddressAutocomplete.jsx` only reports `lat`/`lng` for an address the user ac
 ## Hard
 
 **Q10: Walk me through everything that happens, end-to-end, between a user clicking "Upload" on a memory's images and the images being visible on screen.**
-A: (Use section 3.9's sequence diagram as the mental script.) FormData request → `protect` → `authorizeMemoryImageUpload` loads the Memory and checks `createdBy` match *before* Multer runs → Multer writes files to `server/uploads/` with generated unique names → `uploadMemoryImages` controller pushes `/uploads/<filename>` paths into `memory.images` and saves → on save failure, the just-written files are deleted to avoid orphans → response returns the updated memory → Redux's `uploadMemoryImages.fulfilled` replaces that memory in `state.items` → `MemoryCard.jsx` re-renders, each image's `src` built via `resolveMediaUrl()` which combines the relative `/uploads/...` path with the API's origin (not the frontend's own origin) → the browser requests the image cross-origin from the Express static route, which explicitly sets `Cross-Origin-Resource-Policy: cross-origin` (overriding Helmet's stricter default) so the browser doesn't block it.
+A: (Use section 3.9's sequence diagram as the mental script.) FormData request → `protect` → `authorizeMemoryImageUpload` loads the Memory and checks `createdBy` match *before* Multer even parses the file → Multer (`memoryStorage`) holds each file as an in-memory buffer, nothing touches disk → `uploadMemoryImages` controller streams each buffer to Cloudinary via `uploadBufferToCloudinary`, getting back `{ url, publicId }` → pushes the URLs into `memory.images` and the `public_id`s into the parallel `memory.imagePublicIds`, then saves → on save failure, the just-uploaded Cloudinary assets are destroyed to avoid orphans → response returns the updated memory → Redux's `uploadMemoryImages.fulfilled` replaces that memory in `state.items` → `MemoryCard.jsx` re-renders, each image's `src` built via `resolveMediaUrl()`, which passes the already-absolute Cloudinary `https://` URL straight through → the browser requests the image directly from Cloudinary's CDN (not from our own backend at all).
 
 **Q11: Why is `isTripMember` a shared utility rather than being duplicated in each controller?**
 A: It's the single authorization rule that decides who may read a trip's nested data (its locations, and by extension their memories) — used identically by `locationController` and `memoryController`. Before extraction it was duplicated identically in both files (a code smell); centralizing it in `utils/tripMembership.js` means the *one* rule ("creator OR listed participant") has one place to fix or extend, instead of two copies quietly drifting out of sync.
 
-**Q12: Your project has no automated tests. How do you know it works, and is that a weakness?**
-A: Verification is manual — `api-tests.rest` (a REST Client scratch file exercising every endpoint), `MANUAL_TEST_PLAN.md`, and hands-on browser QA against a real Geoapify key. It is an honest, acknowledged limitation, not something hidden. Given more time, Jest/Supertest (backend) and Vitest/React Testing Library (frontend) would be the natural next step.
+**Q12: Does your project have automated tests? How do you know it works?**
+A: `server/tests/` has a minimal automated smoke suite using Node's built-in test runner (`node:test`, `npm test` — no extra dependencies): it boots the real `app.js` on a real HTTP server with only the four Mongoose model files replaced by lightweight fakes (so no real database is touched), and checks the health endpoint, a protected route rejecting a missing token, a Joi validation failure, wrong/correct-password login, trip-update authorization, the upload-cleanup-on-validation-failure guarantee, security headers, and a full memory-image upload/remove round trip. That's a smoke suite, not full coverage. Beyond that, verification is manual — `api-tests.rest` and `Pathly.postman_collection.json` (both exercising every endpoint) and hands-on browser QA against a real Geoapify key. This is an honest, acknowledged scope limit, not something hidden. Given more time, a broader Jest/Supertest suite against a real or in-memory MongoDB (backend) and Vitest/React Testing Library (frontend) would be the natural next step.
 
 **Q13: Explain why images/videos are explicitly rejected by `createMemorySchema` and `updateMemorySchema`.**
-A: A memory is always created with text first via a normal JSON request; images are only ever attached afterward through the dedicated Multer endpoint (`POST /memories/:id/images`), which involves real file-authorization and disk writes. If `images` were accepted as a plain JSON field, a client could insert arbitrary path strings directly into the database (e.g. pointing at files that were never actually uploaded, or paths outside `/uploads`) without ever going through Multer's validation. `validate()`'s `stripUnknown: true` silently drops any `images`/`videos` field sent to these endpoints rather than saving it.
+A: A memory is always created with text first via a normal JSON request; images are only ever attached afterward through the dedicated Multer endpoint (`POST /memories/:id/images`), which involves real file-authorization and an actual Cloudinary upload. If `images` were accepted as a plain JSON field, a client could insert arbitrary URL strings directly into the database (pointing anywhere at all, including URLs that were never actually uploaded through this app) without ever going through Multer's validation or a real Cloudinary upload. `validate()`'s `stripUnknown: true` silently drops any `images`/`videos` field sent to these endpoints rather than saving it.
 
 **Q14: What's the security reasoning behind checking Multer's `fileFilter` by MIME type but also capping `fileSize`/`files`?**
-A: `fileFilter` restricts *what kind* of file can be written (only JPEG/PNG/WebP — no executables, no arbitrary file types masquerading with a renamed extension, since Multer checks the reported MIME type of the multipart field, not just the filename). `limits.fileSize`/`limits.files` bound the *cost* of an upload — without them, a single request could exhaust disk space or memory with an oversized or enormous batch of files. Together they're two different concerns: content-type restriction and resource-exhaustion protection.
+A: `fileFilter` restricts *what kind* of file can be uploaded (only JPEG/PNG/WebP — no executables, no arbitrary file types masquerading with a renamed extension, since Multer checks the reported MIME type of the multipart field, not just the filename). `limits.fileSize`/`limits.files` bound the *cost* of an upload — without them, a single request could exhaust memory (since files are now buffered in memory, not written to disk) or run up Cloudinary usage with an oversized or enormous batch of files. Together they're two different concerns: content-type restriction and resource-exhaustion protection.
 
 ---
 
@@ -959,16 +980,18 @@ A: `fileFilter` restricts *what kind* of file can be written (only JPEG/PNG/WebP
 | `getMemoriesByLocation` | Same membership check, lists all memories for a location |
 | `getMemoryById` | Same pattern, single memory |
 | `updateMemory` | Creator-only, text content only |
-| `deleteMemory` | Creator-only, deletes any locally uploaded images first |
-| `removeMemoryImage` | Creator-only; sanitizes `filename` with `path.basename`, updates DB then deletes the file |
-| `uploadMemoryImages` | Uses `req.memory` already loaded/authorized by `authorizeMemoryImageUpload`; rolls back written files if the DB save fails |
+| `deleteMemory` | Creator-only, destroys any Cloudinary images first (`imagePublicIds`) |
+| `removeMemoryImage` | Creator-only; identified by array **index** (not filename), updates DB first then destroys the Cloudinary asset |
+| `uploadMemoryImages` | Uses `req.memory` already loaded/authorized by `authorizeMemoryImageUpload`; uploads each buffer to Cloudinary, rolls back the just-uploaded assets if the DB save fails |
 
 ## 8.5 `server/controllers/userController.js`
 
 | Export | What it does |
 |---|---|
 | `getUsers` | Admin-only (`req.user.role !== "admin"` → 403) |
-| `getUserById` / `updateUser` / `deleteUser` | `canManageUser`: admin OR the user themself; `updateUser` whitelists only `name`/`email` as editable fields, rejecting any other field with 400 |
+| `getUserById` / `updateUser` | `canManageUser`: admin OR the user themself; `updateUser`'s body is restricted to `name`/`email` by `userValidation.js` (`stripUnknown: false`, so any other field — `role`, `password`, `_id` — fails validation with 400 instead of being silently dropped) |
+
+> ⚠️ **Updated after the deployment-prep pass:** `deleteUser` and the `DELETE /api/users/:id` route were removed. No frontend flow ever called it, and a real cascade delete of a user's trips/participations/locations/memories/images was judged too large and risky to add speculatively without an actual product requirement for it — leaving a half-working delete was judged worse than not having one.
 
 ## 8.6 `server/middleware/authMiddleware.js` — `protect`
 
@@ -1086,18 +1109,18 @@ Fully documented in Chapter 3.6. Key internal state: `lastValidPlaceRef` (last t
 18. Trip creator is auto-added to `participants` on creation.
 19. Invite codes look like `PTR-XXXX`, generated by `generateInviteCode.js`.
 20. Joining a trip pushes the user into `participants` — never changes `createdBy`.
-21. Deleting a trip cascades to its locations, their memories, and uploaded files.
-22. Deleting a location cascades to its memories and their files.
-23. Cascade logic lives in `utils/cascadeDelete.js`; file cleanup in `utils/mediaCleanup.js`.
-24. Multer writes to `server/uploads/` with generated unique filenames.
+21. Deleting a trip cascades to its locations, their memories, and their Cloudinary images.
+22. Deleting a location cascades to its memories and their Cloudinary images.
+23. Cascade logic lives in `utils/cascadeDelete.js`; Cloudinary cleanup in `utils/cloudinaryUpload.js`.
+24. Multer holds each file in memory (`memoryStorage`) — nothing is ever written to local disk.
 25. Only JPEG/PNG/WebP allowed; max 5MB per file, 5 files per request.
-26. Image-upload authorization runs *before* Multer touches the disk.
-27. A failed DB save after upload deletes the just-written files (no orphans).
-28. Deleting a single image updates the DB first, deletes the file after.
-29. `path.basename` sanitizes filenames against path traversal.
+26. Image-upload authorization runs *before* Multer parses the file.
+27. The Cloudinary upload itself happens *after* Joi validation, in the controller — a failed validation never even creates a Cloudinary asset.
+28. A failed DB save right after a successful Cloudinary upload destroys that just-uploaded asset (no orphans).
+29. Removing a single memory image is identified by array **index** now (`DELETE /memories/:id/images/:index`), not a filename — Cloudinary `public_id`s can contain `/`.
 30. `createMemorySchema`/`updateMemorySchema` reject `images`/`videos` entirely — uploads are a separate endpoint.
 31. Helmet adds security headers by default.
-32. `/uploads` overrides Helmet's CORP to `cross-origin` so images load across origins.
+32. `/uploads` still overrides Helmet's CORP to `cross-origin`, though the route now serves an always-empty directory (kept as a harmless leftover, not actively used).
 33. Rate limiting: general `apiLimiter` + strict `authLimiter` for login/register.
 34. The global error handler is registered **last** in `app.js`.
 35. It normalizes Mongoose `CastError`, `ValidationError`, duplicate-key `11000`, JWT errors, Multer errors.
@@ -1111,7 +1134,7 @@ Fully documented in Chapter 3.6. Key internal state: `lastValidPlaceRef` (last t
 43. `useBodyScrollLock` is a custom Hook extracted from `ImageLightbox` for reuse.
 44. Address coordinates are only ever captured from a genuine Geoapify suggestion selection, never free-typed text.
 45. Geoapify calls go straight from the browser — no backend proxy, separate Axios instance (`geoapify.js`).
-46. `resolveMediaUrl()` builds absolute image URLs from the API's own origin, not the frontend's.
+46. `resolveMediaUrl()` passes an already-absolute Cloudinary URL through unchanged; only a relative legacy path would be combined with the API's own origin.
 47. The Map page has no bulk endpoint — it calls the per-trip locations endpoint once per trip, in parallel.
 48. `normalizeId.js` exists because `createdBy`/`participants` can arrive as raw ObjectId strings OR populated objects.
 49. Google Maps/Places was explored on an unmerged branch; Leaflet+OSM+Geoapify is the final, live choice.
@@ -1163,9 +1186,9 @@ Fully documented in Chapter 3.6. Key internal state: `lastValidPlaceRef` (last t
 5. **Writing business logic inside route files** → Pathly's routes only wire controller functions.
 6. **Confusing authentication with authorization** → Pathly clearly separates `protect` (auth) from `isTripMember`/`createdBy` checks (authorization).
 7. **Trusting the frontend's validation as the real security boundary** → It isn't; Joi is.
-8. **Letting file uploads write to disk before checking permission** → `authorizeMemoryImageUpload` runs before Multer.
-9. **Leaving orphaned files after a failed DB write** → Pathly explicitly rolls back written files on failure.
-10. **Leaving orphaned files/documents after a cascading delete** → `cascadeDelete.js` + `mediaCleanup.js` handle this explicitly.
+8. **Letting file uploads through before checking permission** → `authorizeMemoryImageUpload` runs before Multer even parses the file.
+9. **Leaving orphaned Cloudinary assets after a failed DB write** → the controller destroys the just-uploaded asset in its `catch` block; a Joi failure never even reaches the Cloudinary upload step.
+10. **Leaving orphaned Cloudinary assets/documents after a cascading delete** → `cascadeDelete.js` + `utils/cloudinaryUpload.js` handle this explicitly.
 11. **Comparing ObjectId to string with `===`** → Pathly always uses `.toString()`.
 12. **Assuming a populated field is always an object** → `normalizeId.js` handles both shapes.
 13. **Putting everything in one global state tool** → Pathly deliberately splits Context (auth) from Redux (domain data) based on actual needs.

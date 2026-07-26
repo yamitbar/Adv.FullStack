@@ -1,0 +1,493 @@
+{
+  "info": {
+    "name": "Pathly API",
+    "description": "Manual API test collection for the Pathly MERN project. Chain requests top-to-bottom: Login saves {{token}} automatically, and Create Trip/Location/Memory save their ids for the requests that depend on them.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "tripId", "value": "", "type": "string" },
+    { "key": "locationId", "value": "", "type": "string" },
+    { "key": "memoryId", "value": "", "type": "string" },
+    { "key": "inviteCode", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test.user@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Auto-saves the JWT so every other request (which uses",
+                  "// collection-level bearer auth with {{token}}) works without",
+                  "// manually copying it.",
+                  "if (pm.response.code === 200) {",
+                  "  const jsonData = pm.response.json();",
+                  "  if (jsonData.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.token);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test.user@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User By Id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/users/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", ":id"],
+              "variable": [{ "key": "id", "value": "" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"test.user@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", ":id"],
+              "variable": [{ "key": "id", "value": "" }]
+            },
+            "description": "Only name/email are accepted. Sending role/password/_id is rejected with 400 (see server/validation/userValidation.js)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Trips",
+      "item": [
+        {
+          "name": "Create Trip",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const jsonData = pm.response.json();",
+                  "  if (jsonData.trip && jsonData.trip._id) {",
+                  "    pm.collectionVariables.set('tripId', jsonData.trip._id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "Summer Trip", "type": "text" },
+                { "key": "description", "value": "A short test trip", "type": "text" },
+                { "key": "destination", "value": "Lisbon", "type": "text" },
+                { "key": "startDate", "value": "2026-08-01", "type": "text" },
+                { "key": "endDate", "value": "2026-08-10", "type": "text" },
+                { "key": "coverImage", "type": "file", "src": [] }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Trips",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/trips",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Trip By Id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Trip",
+          "request": {
+            "method": "PUT",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "Summer Trip (updated)", "type": "text" },
+                { "key": "coverImage", "type": "file", "src": [] }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Join Trip",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inviteCode\": \"{{inviteCode}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/join",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "join"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Trip",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}"]
+            },
+            "description": "Cascades to every location, memory and Cloudinary asset under this trip."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Locations",
+      "item": [
+        {
+          "name": "Create Location",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const jsonData = pm.response.json();",
+                  "  if (jsonData.location && jsonData.location._id) {",
+                  "    pm.collectionVariables.set('locationId', jsonData.location._id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "Old Town", "type": "text" },
+                { "key": "address", "value": "Praca do Comercio, Lisbon", "type": "text" },
+                { "key": "coverImage", "type": "file", "src": [] }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "locations"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Locations By Trip",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "locations"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Location By Id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "{{locationId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Location",
+          "request": {
+            "method": "PUT",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "Old Town (updated)", "type": "text" },
+                { "key": "coverImage", "type": "file", "src": [] }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "{{locationId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Location",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "{{locationId}}"]
+            },
+            "description": "Cascades to every memory and Cloudinary asset under this location."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Memories",
+      "item": [
+        {
+          "name": "Create Memory",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const jsonData = pm.response.json();",
+                  "  if (jsonData.memory && jsonData.memory._id) {",
+                  "    pm.collectionVariables.set('memoryId', jsonData.memory._id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Great afternoon exploring the old town.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}/memories",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "{{locationId}}", "memories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Memories By Location",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}/memories",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "{{locationId}}", "memories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Memory By Id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/memories/{{memoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["memories", "{{memoryId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Memory",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Updated memory text.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/memories/{{memoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["memories", "{{memoryId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Memory Images",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "images", "type": "file", "src": [] },
+                { "key": "images", "type": "file", "src": [] }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/memories/{{memoryId}}/images",
+              "host": ["{{baseUrl}}"],
+              "path": ["memories", "{{memoryId}}", "images"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Memory Image",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/memories/{{memoryId}}/images/0",
+              "host": ["{{baseUrl}}"],
+              "path": ["memories", "{{memoryId}}", "images", "0"]
+            },
+            "description": "The trailing number is the image's position in the memory's images array (0 = first image), not a filename."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Memory",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/memories/{{memoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["memories", "{{memoryId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
