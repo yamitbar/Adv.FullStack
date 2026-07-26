@@ -1,52 +1,100 @@
 # Pathly
 
-Pathly is a collaborative travel-memory journal. A user creates a **trip**, adds the **locations** they visited during it, and attaches **memories** (text and photos) to each location. Trips can be shared with other travelers through an invite code, so a group can build the same travel journal together.
+Pathly is a collaborative travel-memory journal. Users create **trips**, add the **locations** they visited during each one, and attach **memories** (text and photos) to each location. Trips can be shared with other travelers through an invite code, so a whole group can build the same travel journal together.
 
-Built as a university full-stack final project on the MERN stack (MongoDB, Express, React, Node.js).
+The problem it solves: information, photos, and memories from a shared trip usually end up scattered across different people's phones and different apps. Pathly centralizes all of it in one place, following a clear hierarchy: `User → Trip → Location → Memory`.
 
-## MVP feature list
+Built as a university full-stack final project on the MERN stack (MongoDB, Express, React, Node.js) — **live in production.**
 
-- Email/password registration and login, with a JWT-protected session.
-- Create, view, edit, and delete trips.
-- Invite other registered users to a trip with a short invite code; joined users become trip participants.
-- Create, view, edit, and delete locations within a trip (full address, visit date, optional custom title and cover image). The address field uses Geoapify Address Autocomplete: selecting a suggested address automatically captures a place label and coordinates behind the scenes — the user never sees or enters these directly, but they're stored and used by the map below.
-- An interactive trip map at `/map` (Leaflet + OpenStreetMap tiles): every accessible location with a saved address appears as a marker, with a popup showing its title/place/address, trip, and visit date, plus a link to its full Location Details page. A trip filter narrows the map to one trip at a time, and "View on map" from a trip's page opens the map pre-filtered to that trip.
-- Create, view, edit, and delete text memories attached to a location.
-- Upload one or more photos to a memory (JPEG/PNG/WebP, up to 5 images per request, 5MB each), with a full-size click-to-view image viewer.
-- Authorization enforced at every read/write endpoint: only a trip's creator and participants can see or modify its locations and memories; only a memory's/location's own creator can edit or delete it.
-- Deleting a trip cascades to its locations, their memories, and any uploaded image files. Deleting a location cascades to its memories and their images.
-- Responsive UI across desktop and mobile viewports, with loading/empty/error states throughout.
+## Live Demo
 
-**Map integration is a core feature, not optional polish, and it is now live.** An earlier attempt integrated Google Places/Google Maps on an unmerged branch; that approach was replaced before merging with Geoapify Address Autocomplete + Leaflet + OpenStreetMap, used throughout this codebase. Earlier project drafts also had a placeholder `/map` route with no real functionality; that placeholder is gone, replaced by the real map page described above.
+| | |
+| --- | --- |
+| **Live Application (Frontend)** | https://adv-full-stack-five.vercel.app |
+| **Backend API** | https://pathly-api-8do5.onrender.com |
+| **GitHub Repository** | https://github.com/yamitbar/Adv.FullStack |
 
-**Not included in this MVP** (explicitly out of scope): route planning/directions between places, live GPS/current-location, weather, place photos or ratings from external APIs, marker clustering, video memories, comments, notifications, profile statistics/pages, advanced sharing/permissions, and real-time features. The `/profile` placeholder route mentioned in earlier drafts has also been removed from the router entirely rather than left as an unfinished page.
+The frontend is deployed on **Vercel**, the backend API on **Render**, the database on **MongoDB Atlas**, and all media (trip/location cover images, memory photos) on **Cloudinary**.
 
-## Tech stack
+## Features
 
-**Backend:** Node.js, Express 5, MongoDB with Mongoose 9, JWT (`jsonwebtoken`), `bcrypt`, `joi` for validation, `multer` (in-memory) + Cloudinary for image storage, `helmet` and `express-rate-limit` for security, `cors`.
-
-**Frontend:** React 19 (Vite), React Router 7, Redux Toolkit, React Context (auth), Axios, `lucide-react` icons, Leaflet + React Leaflet with OpenStreetMap tiles (map), Geoapify Address Autocomplete API (address search).
+- Register and log in with email/password
+- JWT authentication
+- Protected routes (backend middleware and frontend route guards)
+- Trip CRUD (create, view, edit, delete)
+- Join a trip by invite code
+- Participant authorization (creator vs. participant permissions on every trip/location/memory)
+- Location CRUD within a trip
+- Geoapify Address Autocomplete on Add/Edit Location
+- Interactive map with Leaflet and OpenStreetMap tiles
+- Map markers for every location with saved coordinates
+- Memory CRUD (text memories attached to a location)
+- Trip cover image upload
+- Location cover image upload
+- Multiple memory image uploads (up to 5 per request)
+- Image replacement and deletion
+- Cloudinary media storage for all uploaded images
+- Joi validation on every request body
+- Multer for multipart/form-data handling
+- Helmet security headers
+- Rate limiting (general + a stricter limiter on login/register)
+- Global error handler
+- Context API (authentication state)
+- Redux Toolkit (trips and memories domain state)
+- React.lazy and Suspense (route-level code splitting)
+- React.memo (list item components)
+- Error Boundary
+- Custom Hook (`useBodyScrollLock`)
+- Responsive interface across desktop and mobile viewports
 
 ## Architecture
 
+Pathly is a **monorepo**:
+
 ```
-React frontend (Vite dev server / static build)
-        │  Axios, JWT in Authorization header
-        ▼
-Express REST API (server/)
-        │  Mongoose
-        ▼
-MongoDB (local mongod, or MongoDB Atlas in production)
+Adv.FullStack/
+├── client/                        React Frontend
+├── server/                        Node.js / Express Backend
+├── docs/                          Project documentation, screenshots
+├── README.md
+├── render.yaml                    Render deployment blueprint
+└── Pathly.postman_collection.json
+```
+
+**Request flow:**
+
+```
+React / Vercel
+      ↓
+Axios + JWT
+      ↓
+Express API / Render
+      ↓
+MongoDB Atlas
 ```
 
 The frontend never talks to MongoDB directly — every read/write goes through the Express REST API, which owns all validation and authorization.
 
-## Folder structure
+**Media upload flow:**
+
+```
+React FormData
+      ↓
+Multer memoryStorage
+      ↓
+Cloudinary
+      ↓
+URL + public_id stored in MongoDB
+```
+
+Multer still handles incoming `multipart/form-data`, checks the file type, and enforces the size/count limits — but it only ever holds each file in memory long enough to stream it to Cloudinary. Nothing is written to local disk. Cloudinary is responsible for permanent storage; MongoDB stores only the resulting `secure_url` and `public_id` for each image.
+
+### Detailed folder structure
 
 ```
 Adv.FullStack/
 ├── client/                  React app (Vite)
-│   ├── public/               Static assets, Netlify _redirects
+│   ├── public/               Static assets
 │   ├── src/
 │   │   ├── components/       Reusable UI (layout, trips, memories, common)
 │   │   ├── context/          AuthContext (Context API)
@@ -64,109 +112,125 @@ Adv.FullStack/
 │   ├── tests/                 Automated backend smoke tests (Node's built-in test runner)
 │   ├── utils/                 Shared helpers (cascade delete, Cloudinary upload/delete, trip membership, tokens)
 │   ├── validation/            Joi schemas
-│   ├── uploads/                Unused at runtime now (kept only as a static-serving fallback; see Uploads and media), gitignored
-│   ├── .env.example
-│   └── Procfile               Heroku process declaration
+│   └── .env.example
+├── docs/                    Documentation and screenshots
 ├── render.yaml               Render blueprint for the backend (server/)
 ├── Pathly.postman_collection.json   Postman collection covering every endpoint
 └── api-tests.rest           REST Client scratch file for manual API testing
 ```
 
-## Local prerequisites
+## Data Architecture
+
+Pathly's data model follows a strict ownership hierarchy across four MongoDB collections:
+
+```
+User
+  └── Trip
+        └── Location
+              └── Memory
+```
+
+- **`User`** — registered account (name, email, hashed password).
+- **`Trip`** — created by a user; can have multiple participants who joined via invite code.
+- **`Location`** — belongs to exactly one trip; has an address, visit date, and optional cover image.
+- **`Memory`** — belongs to exactly one location; has text and optional photos.
+
+Key relationship fields:
+
+- `Trip.createdBy` — the user who created the trip.
+- `Trip.participants` — users who joined via invite code.
+- `Location.trip` — the trip a location belongs to.
+- `Location.createdBy` — the user who added the location.
+- `Memory.location` — the location a memory is attached to.
+- `Memory.createdBy` — the user who added the memory.
+
+Authorization is derived from this hierarchy: a user can view a trip's locations and memories only if they are that trip's creator or one of its participants (`Trip.participants`). Editing or deleting a specific location or memory is restricted further, to that resource's own creator. Deleting a trip cascades down through its locations and their memories, removing the corresponding database records and their Cloudinary assets together.
+
+## Technology Stack
+
+**Frontend**
+- React
+- Vite
+- React Router
+- Redux Toolkit
+- Context API
+- Axios
+- Leaflet
+- OpenStreetMap
+- Geoapify
+
+**Backend**
+- Node.js
+- Express
+- MongoDB
+- Mongoose
+- JWT
+- bcrypt
+- Joi
+- Multer
+- Cloudinary
+- Helmet
+- Express Rate Limit
+
+**Deployment**
+- Vercel — Frontend
+- Render — Backend
+- MongoDB Atlas — Database
+- Cloudinary — Media
+
+## Environment Variables
+
+No real values or secrets are listed here — only the variable names each side expects. Copy the `.env.example` file on each side and fill in real values locally; **never commit a `.env` file to GitHub.**
+
+### `server/.env`
+
+```
+NODE_ENV=
+PORT=
+MONGO_URI=
+JWT_SECRET=
+JWT_EXPIRES_IN=
+CLIENT_URL=
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+```
+
+### `client/.env`
+
+```
+VITE_API_URL=
+VITE_GEOAPIFY_API_KEY=
+```
+
+## Installation and Local Development
+
+### Prerequisites
 
 - Node.js 18 or later, npm.
-- A running MongoDB instance reachable from the backend — either a local `mongod` (e.g. `mongodb://localhost:27017/pathly`) or a MongoDB Atlas cluster connection string.
+- A MongoDB instance reachable from the backend (a local `mongod`, or a MongoDB Atlas connection string).
 
-## Server setup
+### Server
 
 ```bash
 cd server
 npm install
-cp .env.example .env   # then fill in the real values, see below
-npm run dev             # nodemon, restarts on change
-# or
-npm start                # plain node, for production-style runs
+npm start
 ```
 
-The server refuses to accept requests until the MongoDB connection succeeds (see `server/server.js` / `server/config/db.js`), and logs the exact connection error if it cannot connect.
+(`cp .env.example .env` first and fill in real values — see Environment Variables above. `npm run dev` runs the same server with nodemon for auto-restart during development.)
 
-## Client setup
+### Client
 
 ```bash
 cd client
 npm install
-cp .env.example .env   # only needed if your API is not on http://localhost:3000/api
-npm run dev              # Vite dev server, default http://localhost:5173
-npm run build             # production build into client/dist
-npm run preview           # serve the production build locally
+npm run dev
 ```
 
-## Environment variables
+(`cp .env.example .env` first if your API isn't on the default local URL. `npm run build` produces a production build in `client/dist`.)
 
-### `server/.env`
-
-| Variable | Purpose |
-| --- | --- |
-| `NODE_ENV` | `development` or `production`. Controls whether stack traces are included in error responses. |
-| `PORT` | Port the Express server listens on. Defaults to `3000` if unset. |
-| `MONGO_URI` | MongoDB connection string (local `mongodb://...` or Atlas `mongodb+srv://...`). |
-| `JWT_SECRET` | Secret used to sign/verify JWTs. Must be a long random string; never commit a real value. |
-| `JWT_EXPIRES_IN` | JWT lifetime, e.g. `1h`. |
-| `CLIENT_URL` | The frontend's origin, used for the CORS `origin` allowlist. Must exactly match where the frontend is actually running (`http://localhost:5173` in local dev). |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary account's cloud name. Required for trip/location cover images and memory photos to upload. |
-| `CLOUDINARY_API_KEY` | Cloudinary API key. |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret. Never commit a real value. |
-
-### `client/.env`
-
-| Variable | Purpose |
-| --- | --- |
-| `VITE_API_URL` | Base URL of the backend API, including the `/api` prefix, e.g. `http://localhost:3000/api`. If unset, the client falls back to `http://localhost:3000/api` (see `client/src/services/api.js`). |
-| `VITE_GEOAPIFY_API_KEY` | Geoapify API key, used for address autocomplete on Add/Edit Location. If unset, the address field still works as a plain text input — no suggestions are offered, and no coordinates are captured — see Map & address autocomplete setup below. |
-
-Neither `.env` file is committed — only the `.env.example` templates are, and they contain no real secrets. The `/map` page itself (Leaflet + OpenStreetMap tiles) needs no API key at all - only the address autocomplete field does.
-
-### Map & address autocomplete setup
-
-The address field on Add/Edit Location uses [Geoapify's Address Autocomplete API](https://www.geoapify.com/address-autocomplete/), called directly from the browser (no backend proxy). The `/map` page renders locations with [Leaflet](https://leafletjs.com/) and [React Leaflet](https://react-leaflet.js.org/) on top of free [OpenStreetMap](https://www.openstreetmap.org/copyright) tiles, which require no API key or account.
-
-To enable address autocomplete locally:
-
-1. Create a free account at [Geoapify MyProjects](https://myprojects.geoapify.com/) and create a project - an API key is generated automatically (multiple keys per project are also supported).
-2. Optionally restrict the key by HTTP referrer/origin in the project's API key settings, scoped to your local dev origin (e.g. `http://localhost:5173`) and, later, your deployed frontend origin.
-3. Add the key to `client/.env` as `VITE_GEOAPIFY_API_KEY=your_key_here` (copy from `client/.env.example` first if you haven't already).
-4. Restart the Vite dev server (`npm run dev`) — Vite only reads `.env` values at startup, so a running dev server won't pick up a newly added key.
-
-Without a configured key (or if Geoapify's API is temporarily unavailable), Add/Edit Location still works: the address field falls back to plain text entry, and no coordinates are captured for that location - it simply won't appear on the map later, exactly like an older location created before this feature existed.
-
-A few behaviors worth knowing before testing or demoing this:
-
-- **An address must actually be selected from the suggestion list**, not just typed, for coordinates to be captured. If the text is typed but no suggestion is chosen, submitting Add/Edit Location is blocked with "Please select an address from the suggestions." - this exists specifically to avoid ever saving fake/guessed coordinates for an address nobody confirmed.
-- **Editing the address text after selecting a suggestion invalidates that selection** (and its coordinates) until a new suggestion is chosen or the text is changed back - this prevents a new address ever being saved with a previous address's coordinates attached.
-- **Locations without coordinates (including every location created before this feature existed) simply don't appear as markers on `/map`** - they remain completely normal everywhere else in the app (Trip Details, Location Details, memories, editing).
-- **When the current address text has no resolved coordinates but is still savable as free text** (Geoapify unavailable, or an existing location that already has no coordinates), the field shows an inline note - "This address was not found on the map. You can still save it as free text, but this location will not appear on the map." - right under the address input. It disappears as soon as a suggestion is selected, and never shows while the field is empty. Editing an existing location's address back to free text also clears any previously-saved coordinates on save, instead of leaving a stale lat/lng behind.
-- The map's tile attribution (`© OpenStreetMap contributors`) is required by OpenStreetMap's license and is always shown on the map.
-
-## Authentication flow
-
-1. `POST /api/auth/register` creates a user with a bcrypt-hashed password and returns the created user — **it does not return a JWT.** The response never includes the password field (`select: false` on the schema, and it's excluded again explicitly in the controller). After a successful registration, the frontend redirects to `/login` with a "You can now log in" message rather than logging the user in automatically.
-2. `POST /api/auth/login` verifies the password with bcrypt and returns the user together with a fresh JWT — this is the only endpoint that issues a token.
-3. The client stores that JWT in `localStorage` and attaches it as `Authorization: Bearer <token>` on every request via an Axios interceptor.
-4. Every non-auth route on the backend is wrapped in a `protect` middleware that verifies the JWT, loads the user, and rejects the request (401) if the token is missing, invalid, expired, or belongs to a user that no longer exists.
-5. On the frontend, `ProtectedRoute` reads `AuthContext` and redirects unauthenticated visitors to `/login` before rendering any trip/location/memory page. A 401 response from the API also clears the stored session and redirects to `/login`.
-
-## Main demo flow
-
-1. Register two accounts (or use one and imagine a second).
-2. Log in, create a trip from **My Trips → Create a trip**.
-3. Open the trip, copy its invite code (**Share trip**).
-4. Add a location to the trip (start typing the full address, select one of the Geoapify suggestions, optionally add a custom title).
-5. Open the location, add a text memory, then add another memory with photos - click a photo to open it full-size.
-6. Open **Map** in the navbar (or **View on map** from the trip page) to see the new location as a marker; use the trip filter to narrow it to just this trip.
-7. Log in as the second account, use **Join with invite code** on **My Trips**, paste the code.
-8. The second account can now see the trip, its locations, its memories, and its markers on the map, and can add their own memory — but cannot edit or delete the first account's trip, locations, or memories (creator-only controls simply don't render for them).
-
-## Main API endpoints
+## API Documentation
 
 All routes below except register/login require `Authorization: Bearer <token>`.
 
@@ -177,7 +241,7 @@ All routes below except register/login require `Authorization: Bearer <token>`.
 | GET | `/api/auth/me` | Get the current user |
 | GET | `/api/users` | List all users (admin only) |
 | GET | `/api/users/:id` | Read a user (self or admin only) |
-| PUT | `/api/users/:id` | Update a user's name/email (self or admin only; any other field, e.g. `role` or `password`, is rejected outright, not silently dropped) |
+| PUT | `/api/users/:id` | Update a user's name/email (self or admin only) |
 | POST | `/api/trips` | Create a trip |
 | GET | `/api/trips` | List the current user's trips |
 | GET / PUT / DELETE | `/api/trips/:id` | Read/update/delete a trip (member-only read, creator-only write) |
@@ -191,113 +255,95 @@ All routes below except register/login require `Authorization: Bearer <token>`.
 | POST | `/api/memories/:id/images` | Upload up to 5 images to a memory |
 | DELETE | `/api/memories/:id/images/:index` | Remove one image from a memory, identified by its position in that memory's `images` array (`0` = first image) |
 
-There is no `DELETE /api/users/:id` route: no frontend flow ever triggers account deletion, and a real cascade delete of a user's trips, participant references, locations, memories, and images was judged too large/risky to add speculatively without an actual product requirement for it.
+The full request/response set is documented in `api-tests.rest` at the repo root (VS Code REST Client extension), and as a Postman alternative in **`Pathly.postman_collection.json`** at the repo root: import it into Postman, set `baseUrl`, and run **Login** first — its test script automatically saves the returned JWT into the collection's `token` variable so every other request authenticates without manual copying. Creating a trip/location/memory likewise auto-saves `tripId`/`locationId`/`memoryId` for the requests that depend on them.
 
-The full request/response set (including negative-path examples like missing tokens and invalid data) is documented in `api-tests.rest` at the repo root (VS Code REST Client extension) and, as a Postman alternative, in `Pathly.postman_collection.json` at the repo root — import it into Postman, set `baseUrl` (defaults to `http://localhost:3000/api`), and run **Login** first: its test script automatically saves the returned JWT into the collection's `token` variable so every other request authenticates without manual copying. Creating a trip/location/memory likewise auto-saves `tripId`/`locationId`/`memoryId` for the requests that depend on them.
+## Security
 
-## Uploads and media
+- Password hashing with bcrypt; passwords are never returned in any API response.
+- JWT authentication on every protected route.
+- Resource-level authorization: trip membership is required to view a trip's locations/memories; only a resource's own creator can edit or delete it.
+- Joi validation on every request body, with unexpected fields dropped or rejected rather than trusted.
+- Helmet sets standard security headers on every response.
+- Rate limiting: a general limiter on the API plus a stricter limiter on login/register to slow down credential brute-forcing.
+- CORS restricted to the deployed frontend's origin.
+- File uploads restricted by MIME type, size, and count.
+- Secrets (`JWT_SECRET`, `MONGO_URI`, Cloudinary credentials) are stored only as environment variables — never committed to the repository.
 
-Trip cover images, location cover images, and memory photos are uploaded straight to **Cloudinary** — Multer (`server/middleware/upload.js`) holds each file in memory only long enough to stream it to Cloudinary (`server/utils/cloudinaryUpload.js`); nothing is ever written to the server's local disk. Each document stores the Cloudinary `secure_url` in the same field the frontend already reads (`coverImage` on Trip/Location, each entry of `images` on Memory), plus a parallel `public_id` field used only by the backend to replace/delete the asset later (`coverImagePublicId` on Trip/Location, `imagePublicIds` on Memory, same order as `images`). Because `resolveMediaUrl()` in `client/src/services/api.js` already passes absolute `https://` URLs through unchanged, the frontend needed no changes to display these images.
+## Testing
 
-Only `image/jpeg`, `image/png`, and `image/webp` are accepted; uploads are capped at 5MB per file and 5 files per request. The upload to Cloudinary only happens *after* Joi validation succeeds, so a request that fails validation never creates a Cloudinary asset in the first place — nothing to roll back. If the database write fails *after* a successful Cloudinary upload (e.g. replacing a cover image), the just-uploaded asset is deleted from Cloudinary so it's never left orphaned with no matching record. Deleting a trip/location cascades to every location/memory under it and destroys every Cloudinary asset they reference, not just their database records.
+- Backend automated tests: **12/12 passed** (`npm test`, Node's built-in test runner).
+- Backend syntax checks (`node --check`) passed on every server file.
+- Production flow manually verified: register and login, trip creation, location creation, memory creation, trip/location/memory image uploads, Geoapify autocomplete, map markers, MongoDB Atlas persistence, Cloudinary storage, the Render backend, and the Vercel frontend.
 
-`server/uploads/` and its static-serving route in `server/app.js` are left in place but effectively unused now — nothing writes to that folder anymore, so it stays empty on a fresh deploy. Removing it entirely was judged an unnecessary extra change this close to submission.
+## Screenshots
 
-**Note on Heroku/Render/Railway:** since media now lives on Cloudinary rather than the backend's local disk, an ephemeral filesystem (which Heroku/Render/Railway all have) is no longer a concern for uploaded images.
+### Home Page
+
+![Pathly Home Page](docs/screenshots/home.png)
+
+### My Trips
+
+![Pathly My Trips Page](docs/screenshots/my-trips.png)
+
+### Trip Details
+
+![Pathly Trip Details Page](docs/screenshots/trip-details.png)
+
+### Location and Memories
+
+![Pathly Location Details and Memories](docs/screenshots/location-details.png)
+
+### Interactive Map
+
+![Pathly Interactive Map](docs/screenshots/map.png)
+
+## Authentication flow
+
+1. `POST /api/auth/register` creates a user with a bcrypt-hashed password and returns the created user — it does not return a JWT. After a successful registration, the frontend redirects to `/login`.
+2. `POST /api/auth/login` verifies the password with bcrypt and returns the user together with a fresh JWT — this is the only endpoint that issues a token.
+3. The client stores that JWT in `localStorage` and attaches it as `Authorization: Bearer <token>` on every request via an Axios interceptor.
+4. Every non-auth route on the backend is wrapped in a `protect` middleware that verifies the JWT, loads the user, and rejects the request (401) if the token is missing, invalid, expired, or belongs to a user that no longer exists.
+5. On the frontend, `ProtectedRoute` reads `AuthContext` and redirects unauthenticated visitors to `/login` before rendering any trip/location/memory page. A 401 response from the API also clears the stored session and redirects to `/login`.
 
 ## State management
 
-- **Context API** (`client/src/context/AuthContext.jsx`) owns authentication: the current user, login/register/logout actions, and session restoration from `localStorage` on page load.
-- **Redux Toolkit** (`client/src/store/`) owns domain data: trips (`tripsSlice.js`) and memories (`memoriesSlice.js`), each with independent per-operation loading/error state (e.g. creating a trip and deleting a different trip don't share a single global "loading" flag).
-
-Both are active in the same happy path: `ProtectedRoute` and the navbar read `AuthContext`, while `MyTrips`, `TripDetails`, and `LocationDetails` dispatch Redux thunks and read the Redux store.
-
-## Security measures
-
-- Passwords hashed with bcrypt; never returned in any API response.
-- JWT-based auth on every protected route; `protect` middleware rejects missing/invalid/expired tokens and tokens for deleted users.
-- All request bodies validated with Joi (`stripUnknown: true` by default), so unexpected fields (like raw coordinates) are silently dropped rather than trusted. `PUT /api/users/:id` overrides this to `stripUnknown: false`: it accepts only `name`/`email`, and any other field (a spoofed `role`, `password`, `_id`, etc.) makes the whole request fail with 400 instead of being quietly dropped.
-- Authorization checked on every read and write, not just writes — trip membership is required to view a trip's locations/memories, and only a resource's own creator can edit or delete it.
-- `helmet` (`server/app.js`) sets standard security headers (e.g. `X-Content-Type-Options`, `X-Frame-Options`/frame-ancestors via CSP, `Strict-Transport-Security`) on every response. The `/uploads` static route specifically overrides Helmet's default `Cross-Origin-Resource-Policy` (`same-origin`) to `cross-origin`, since uploaded images are legitimately requested from a different origin (the deployed frontend) than the one serving them — without that override every memory/location image would fail to load.
-- `express-rate-limit` (`server/middleware/rateLimiter.js`) applies a general limiter to all of `/api` (100 requests/15 min in production, a much looser 1000/15 min in development so normal manual QA and map/location loading never trips it) and a stricter, dedicated limiter on `POST /api/auth/login` and `POST /api/auth/register` specifically (10 requests/15 min in production) to slow down credential brute-forcing. Both return a consistent `{ success: false, message }` JSON body, not an HTML error page, and don't apply to `GET /api/auth/me`.
-- File uploads restricted by MIME type, size, and count; upload authorization runs *before* Multer writes anything to disk.
-- Secrets (`JWT_SECRET`, `MONGO_URI`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`) live only in untracked `.env` files; `.gitignore` excludes `.env`, `uploads/`, `node_modules/`, and `dist/`.
-- `app.set("trust proxy", 1)` (`server/app.js`) so `express-rate-limit` reads the real client IP from `X-Forwarded-For` when deployed behind Heroku/Render/Railway's reverse proxy, instead of misidentifying every request as coming from the proxy itself.
+- **Context API** (`client/src/context/AuthContext.jsx`) owns authentication: the current user, login/register/logout actions, and session restoration on page load.
+- **Redux Toolkit** (`client/src/store/`) owns domain data: trips (`tripsSlice.js`) and memories (`memoriesSlice.js`), each with independent per-operation loading/error state.
 
 ## Frontend resilience
 
-- **404 page** (`client/src/pages/NotFound.jsx`): any URL that doesn't match a real route falls through to a final wildcard (`path="*"`) route in `App.jsx`, showing a friendly "this path leads nowhere" message with a way back to Home, plus a My Trips shortcut if already logged in — never a blank page or a raw router error.
-- **Error Boundary** (`client/src/components/common/ErrorBoundary.jsx`), mounted around `<App />` in `main.jsx`: catches unexpected React rendering errors anywhere in the tree and shows a friendly fallback (with a way back to Home or to reload) instead of a blank white screen. This is a different safety net from the per-page loading/error/empty states used throughout the app (e.g. in `MyTrips`, `TripDetails`, `LocationDetails`) — those handle expected, recoverable API failures without ever unmounting the page; the Error Boundary only fires for a genuine unexpected JavaScript error during rendering, which those states can't catch.
-- **`useBodyScrollLock`** (`client/src/hooks/useBodyScrollLock.js`): a small custom hook, extracted from `ImageLightbox`, that locks page scrolling while a full-screen overlay is open and restores it afterward.
+- **404 page** (`client/src/pages/NotFound.jsx`): any URL that doesn't match a real route falls through to a wildcard route, showing a friendly message with a way back to Home.
+- **Error Boundary** (`client/src/components/common/ErrorBoundary.jsx`): catches unexpected React rendering errors anywhere in the tree and shows a friendly fallback instead of a blank screen.
+- **`useBodyScrollLock`** (`client/src/hooks/useBodyScrollLock.js`): a custom hook that locks page scrolling while a full-screen overlay (e.g. the memory image viewer) is open, and restores it afterward.
 
-## Known limitations
+## Known Limitations
 
-- Automated test coverage is a minimal smoke suite (`server/tests/`), not a comprehensive unit/integration suite — see Testing section for exactly what it does and doesn't cover.
-- The map shows markers only for locations with saved coordinates - locations created without selecting an address suggestion (including everything created before this feature existed) don't appear on it, though they remain fully usable elsewhere.
-- No marker clustering - fine at the current expected scale (a personal/small-group travel journal), but a large number of markers close together would visually overlap.
-- No directions, routes between places, live GPS/current-location, weather, or place photos/ratings from external APIs.
-- No video memories, comments, notifications, or user profile/statistics page — these were intentionally descoped for this MVP (see MVP feature list above), not partially built or pending.
+- Render's free-tier instance may spin down after a period of inactivity, so the first request after idle time can take longer to respond.
+- The JWT is stored in `localStorage`, as part of the current SPA authentication design.
+- Automated test coverage is a smoke suite covering the core flows, not an exhaustive unit/integration suite.
+- No marker clustering on the map — fine at the current expected scale, but a large number of markers close together would visually overlap.
+- No directions/routes between places, live GPS, weather, or place photos/ratings from external APIs.
+- No video memories, comments, notifications, or a user profile/statistics page — intentionally out of scope for this MVP.
 - No password-reset or email-verification flow.
 
 ## Future improvements
 
-- Marker clustering on the map if the number of locations in a trip grows large enough to make individual markers hard to distinguish.
-- A profile/statistics page (out of scope for this MVP; see Known limitations).
-- Expand automated test coverage beyond the current smoke suite (more edge cases, a real integration suite against an in-memory or Dockerized MongoDB, frontend tests with Vitest/RTL).
-- Add pagination for trips/locations/memories lists as data volume grows.
-
-## Deployment
-
-Not yet deployed. This section documents the intended setup; fill in the URLs once live.
-
-- **Frontend:** _placeholder — Vercel or Netlify URL once deployed_
-- **Backend:** _placeholder — Heroku URL once deployed_
-
-### Backend (Heroku)
-
-The repository is a monorepo with the Express app in `server/`, so a plain `git push heroku main` from the repo root will not find a root `package.json`. Deploy the `server/` subdirectory as the Heroku app root using either:
-
-```bash
-# Option A: subtree push (from the repo root)
-git subtree push --prefix server heroku main
-
-# Option B: Heroku's monorepo buildpack, then set:
-heroku buildpacks:add -a <app-name> https://github.com/lstoll/heroku-buildpack-monorepo
-heroku config:set -a <app-name> APP_BASE=server
-```
-
-Either way, set these Heroku config vars before deploying: `MONGO_URI` (an Atlas connection string — Heroku dynos can't reach a laptop's local MongoDB), `JWT_SECRET`, `JWT_EXPIRES_IN`, `CLIENT_URL` (the deployed frontend's real origin), `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, and `NODE_ENV=production`. Do **not** set `PORT` — Heroku injects it automatically, and `server.js` already reads `process.env.PORT`.
-
-`server/Procfile` (`web: node server.js`) and `server/package.json`'s `engines.node` field are already in place for Heroku's Node buildpack. The `/` route (`GET /`) returns a simple 200 text response and can be used as a health check. `server/app.js` also sets `app.set("trust proxy", 1)`, required for `express-rate-limit` to read the real client IP through any of these platforms' reverse proxy — without it, every API request would fail once deployed.
-
-**Render or Railway instead of Heroku:** either works with the same `server/` root directory, the same config vars as above (`MONGO_URI`/`JWT_SECRET`/`JWT_EXPIRES_IN`/`CLIENT_URL`/`CLOUDINARY_CLOUD_NAME`/`CLOUDINARY_API_KEY`/`CLOUDINARY_API_SECRET`/`NODE_ENV=production`), `npm install` as the build command, and `node server.js` (or `npm start`) as the start/run command — `server/Procfile` isn't read by either, but nothing else changes. A ready-to-use `render.yaml` blueprint is included at the repo root: in Render, "New +" → "Blueprint" and point it at this repo; it declares the web service (root directory `server/`, build/start commands, health check path `/`) and lists every required env var (secrets marked `sync: false` so Render prompts for them in the dashboard instead of reading a value from the file).
-
-### Frontend (Vercel or Netlify)
-
-Set the project's root directory to `client/` in the platform's dashboard (both Vercel and Netlify support this natively for monorepos). Set the build command to `npm run build`, the output directory to `dist`, and add the environment variable `VITE_API_URL` pointing at the deployed backend, e.g. `https://<your-heroku-app>.herokuapp.com/api`.
-
-SPA fallback routing (so refreshing `/trips/:id` doesn't 404) is already configured: `client/public/_redirects` for Netlify, `client/vercel.json` for Vercel.
-
-## Testing / manual verification
-
-Verification comes from four different sources, each with a different level of confidence. They are kept separate on purpose — none of them substitutes for another.
-
-**Automated backend smoke tests (`server/tests/`, run with `npm test`).** Uses Node's built-in test runner (`node:test`) — no extra dependencies. The tests boot the *real* `server/app.js` (real Express wiring, real Joi schemas, real JWT/bcrypt, real middleware order) on a real HTTP server, but replace the four Mongoose model files with small in-memory fakes so no real MongoDB is touched. This was necessary, not just a design choice: in the sandbox this project was finished in, `require("mongoose")` itself hangs indefinitely (confirmed with `timeout 10 node -e "require('mongoose')"`, which exits 124) — a pre-existing environment limitation, unrelated to this project's code, that would block any test touching Mongoose directly. `server/app.js` never requires Mongoose itself (only `server.js`/`config/db.js` do), so stubbing just the four model files keeps the real route/controller/middleware code under test. All 9 tests pass as of this writing: health check, a protected route rejecting a missing token, Joi validation failure on register, wrong-password login, correct-password login, trip-update authorization (rejecting a non-owner), upload-cleanup-on-validation-failure (asserting Cloudinary is never even called when Joi rejects the request first), Helmet security headers being present, and a full memory-image upload-then-remove round trip through the Cloudinary-backed endpoints. This is a smoke suite, not full coverage — it does not touch a real database and does not replace manual QA.
-
-**Runtime API verification (real database, real HTTP requests) — from the previous work session.** The 32 requests in `api-tests.rest` were manually executed successfully by the project owner against a real local MongoDB instance and a real running server via the VS Code REST Client extension. That pass caught a real bug (a missing `require("path")` in `server/middleware/upload.js`) that static checks alone could not have found. A Postman alternative (`Pathly.postman_collection.json`) now exists too, covering the same endpoints plus the updated user-update and Cloudinary-backed media routes, but it has not itself been executed against a live server (no MongoDB/Cloudinary credentials are available in this sandbox) — re-run it once real credentials exist, before demoing.
-
-**Static verification.** `node --check` passes on all 37 backend `.js` files (re-verified after every change in this round, including the Cloudinary migration). On the frontend, `npm run lint` (oxlint) and `npm run build` (Vite) both crash with `Bus error (core dumped)` in this sandbox — a native-binary crash confirmed reproducible on demand and unrelated to any code in this project (the same crash happens on an unmodified checkout). Brace/paren/bracket-balance checks were used as a substitute static check on every edited `.jsx`/`.js` file in the client. **Both commands should be re-run in a normal local environment before submitting** — they were not able to confirm a clean lint/build pass here.
-
-**Manual browser QA from the previous work session.** Clicking through the actual UI in a real browser confirmed: post-login navigation, Geoapify address autocomplete, the `/map` page and its markers/popups/trip filter, the memory image lightbox and delete-X control, and the core CRUD/authorization/invite-code flows. This round of work did not repeat that browser QA (no browser or live backend is available in this sandbox) — anything touched by this round's changes (Cloudinary-backed image upload/replace/delete, the user-update validation, the memory image remove-by-index endpoint) still needs a real click-through pass before the final demo.
+- Marker clustering on the map for trips with many locations.
+- A profile/statistics page.
+- Expanded automated test coverage (more edge cases, a full integration suite, frontend tests).
+- Pagination for trips/locations/memories lists as data volume grows.
 
 ## Author
 
-**Yamit** — final project for a full-stack development course (MongoDB, Express, React, Node).
-_Course name, student ID and submission date: fill in before submitting._
+**Yamit Barkan**
+Solo Developer & Full-Stack Developer
 
-## Live links
+Designed and built the entire system independently, end to end:
 
-_Not yet deployed - see Deployment above. Fill in once the frontend and backend are live:_
-
-- **Frontend:** _placeholder_
-- **Backend:** _placeholder_
+- Frontend (React, Vite, Redux Toolkit, Context API)
+- Backend (Node.js, Express, REST API design)
+- Database integration (MongoDB, Mongoose)
+- Authentication and authorization (JWT, bcrypt, role/ownership-based access control)
+- Media upload (Multer, Cloudinary)
+- Map integration (Geoapify, Leaflet, OpenStreetMap)
+- Deployment (Vercel, Render, MongoDB Atlas, Cloudinary)
