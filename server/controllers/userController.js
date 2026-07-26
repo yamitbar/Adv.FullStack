@@ -60,7 +60,8 @@ const getUserById = async (req, res, next) => {
   }
 };
 
-// Update a user by id
+// Update a user by id. req.body is already restricted to name/email and
+// validated (trimmed, email lowercased) by updateUserSchema.
 const updateUser = async (req, res, next) => {
   try {
     if (!canManageUser(req.user, req.params.id)) {
@@ -70,45 +71,15 @@ const updateUser = async (req, res, next) => {
       });
     }
 
-    const requestedFields = Object.keys(req.body);
-    const allowedFields = ["name", "email"];
-    const unsafeFields = requestedFields.filter(
-      (field) => !allowedFields.includes(field)
-    );
-
-    if (unsafeFields.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Fields cannot be updated here: ${unsafeFields.join(", ")}`,
-      });
-    }
-
-    if (requestedFields.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "At least one of name or email is required",
-      });
-    }
-
-    const safeUpdates = {};
-
-    for (const field of allowedFields) {
-      if (req.body[field] !== undefined) {
-        safeUpdates[field] = req.body[field];
-      }
-    }
-
-    // Find the user and update the provided fields
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      safeUpdates,
+      req.body,
       {
         new: true,
         runValidators: true,
       }
     ).select("-password");
 
-    // Check if the user exists
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -125,39 +96,8 @@ const updateUser = async (req, res, next) => {
   }
 };
 
-// Delete a user by id
-const deleteUser = async (req, res, next) => {
-  try {
-    if (!canManageUser(req.user, req.params.id)) {
-      return res.status(403).json({
-        success: false,
-        message: "You are not allowed to delete this user",
-      });
-    }
-
-    // Find the user and delete it
-    const user = await User.findByIdAndDelete(req.params.id);
-
-    // Check if the user exists
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "User deleted successfully",
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 module.exports = {
   getUsers,
   getUserById,
   updateUser,
-  deleteUser,
 };

@@ -1,33 +1,34 @@
 const express = require("express");
-// Create a new router for user routes
 const router = express.Router();
 
-// Import controller functions
 const {
   getUsers,
   getUserById,
   updateUser,
-  deleteUser,
 } = require("../controllers/userController");
 
-// Import authentication middleware
 const { protect } = require("../middleware/authMiddleware");
+const validate = require("../middleware/validate");
+const { updateUserSchema } = require("../validation/userValidation");
 
-// GET /
-// Return all users from the database
+// Admin-only listing
 router.get("/", protect, getUsers);
 
-// GET /:id
-// Return a single user by MongoDB id
+// Self or admin
 router.get("/:id", protect, getUserById);
 
-// PUT /:id
-// Update a single user by MongoDB id
-router.put("/:id", protect, updateUser);
+// stripUnknown: false so a field like "role" or "password" is rejected
+// outright instead of silently dropped.
+router.put(
+  "/:id",
+  protect,
+  validate(updateUserSchema, { stripUnknown: false }),
+  updateUser
+);
 
-// DELETE /:id
-// Delete a single user by MongoDB id
-router.delete("/:id", protect, deleteUser);
+// No DELETE route: account deletion is not part of the product (no
+// frontend flow uses it), and a full cascade delete of a user's trips,
+// participant references, locations, memories and files was judged
+// too large/risky to add without a real product requirement for it.
 
-// Export the router
 module.exports = router;
