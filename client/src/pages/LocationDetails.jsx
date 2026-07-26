@@ -342,35 +342,12 @@ function LocationDetails() {
     setSaving(true);
     setEditError("");
 
-    // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed
-    // working end-to-end.
-    console.log(
-      "[DEBUG LocationDetails submit] coverImageFile:",
-      coverImageFile &&
-        `${coverImageFile.name} (${coverImageFile.size} bytes, ${coverImageFile.type})`
-    );
-    console.log(
-      "[DEBUG LocationDetails submit] removeExistingImage:",
-      removeExistingImage
-    );
-    console.log(
-      "[DEBUG LocationDetails submit] FormData has coverImage entry:",
-      locationFormData.has("coverImage")
-    );
-
     try {
       // Do NOT set a Content-Type header - Axios computes the
       // multipart boundary itself when the body is a FormData instance.
       const { data } = await api.put(
         `/locations/${locationId}`,
         locationFormData
-      );
-
-      // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed
-      // working end-to-end.
-      console.log(
-        "[DEBUG LocationDetails submit] server response coverImage:",
-        data.location.coverImage
       );
 
       setLocation(data.location);

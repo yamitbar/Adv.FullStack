@@ -355,35 +355,12 @@ function TripDetails() {
       tripFormData.append("removeCoverImage", "true");
     }
 
-    // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed
-    // working end-to-end.
-    console.log(
-      "[DEBUG TripDetails submit] coverImageFile:",
-      coverImageFile &&
-        `${coverImageFile.name} (${coverImageFile.size} bytes, ${coverImageFile.type})`
-    );
-    console.log(
-      "[DEBUG TripDetails submit] removeExistingImage:",
-      removeExistingImage
-    );
-    console.log(
-      "[DEBUG TripDetails submit] FormData has coverImage entry:",
-      tripFormData.has("coverImage")
-    );
-
     try {
       // Do NOT set a Content-Type header - Axios computes the
       // multipart boundary itself when the body is a FormData instance.
-      const updatedTrip = await dispatch(
+      await dispatch(
         updateTrip({ tripId, tripData: tripFormData })
       ).unwrap();
-
-      // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed
-      // working end-to-end.
-      console.log(
-        "[DEBUG TripDetails submit] server response coverImage:",
-        updatedTrip.coverImage
-      );
 
       setIsEditing(false);
     } catch {
