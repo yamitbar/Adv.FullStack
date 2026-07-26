@@ -117,26 +117,55 @@ const FakeMemory = {
   findById: (id) => chainable(id === "memory1" ? fakeMemory : null),
 };
 
+// Locations, keyed by _id - used by the location cover-image test below.
+const fakeLocations = {};
+
+const FakeLocation = {
+  findById: (id) => chainable(fakeLocations[id] || null),
+};
+
 injectFakeModule("models/User.js", FakeUser);
 injectFakeModule("models/Trip.js", FakeTrip);
-injectFakeModule("models/Location.js", {});
+injectFakeModule("models/Location.js", FakeLocation);
 injectFakeModule("models/Memory.js", FakeMemory);
 
-// Stub the Cloudinary SDK so no real network call is ever attempted, and
-// so the upload-cleanup test can assert it was never invoked.
+// Stub the ENTIRE Cloudinary SDK surface the app uses (upload_stream AND
+// destroy) so no real network call or SDK credential check ever happens -
+// without stubbing destroy too, removeMemoryImage/deleteTrip/etc. would
+// reach the real SDK and fail with "Must supply api_key".
+//
+// public_id/url are derived from the buffer's own content (not a fixed
+// value) so tests can tell different uploads apart. A buffer starting
+// with "FAIL_UPLOAD" simulates a failed upload, for the partial-batch
+// failure test below.
 const cloudinary = require(path.join(serverDir, "config/cloudinary"));
+
 let uploadStreamCallCount = 0;
+let destroyedPublicIds = [];
+
 cloudinary.uploader.upload_stream = (options, callback) => ({
   end: (buffer) => {
     uploadStreamCallCount += 1;
-    setImmediate(() =>
+
+    const content = buffer.toString();
+
+    setImmediate(() => {
+      if (content.startsWith("FAIL_UPLOAD")) {
+        return callback(new Error("Simulated Cloudinary upload failure"));
+      }
+
       callback(null, {
-        secure_url: "https://res.cloudinary.com/demo/image/upload/v1/test.jpg",
-        public_id: "test",
-      })
-    );
+        secure_url: `https://res.cloudinary.com/demo/image/upload/v1/${options.folder}/${content}.jpg`,
+        public_id: `${options.folder}/${content}`,
+      });
+    });
   },
 });
+
+cloudinary.uploader.destroy = async (publicId) => {
+  destroyedPublicIds.push(publicId);
+  return { result: "ok" };
+};
 
 const app = require(path.join(serverDir, "app"));
 
@@ -286,6 +315,8 @@ test("memory image upload then remove: full round trip via Cloudinary-backed end
     expiresIn: "1h",
   });
 
+  destroyedPublicIds = [];
+
   const formData = new FormData();
   formData.append(
     "images",
@@ -305,6 +336,8 @@ test("memory image upload then remove: full round trip via Cloudinary-backed end
   assert.equal(uploadBody.images.length, 1);
   assert.equal(fakeMemory.imagePublicIds.length, 1);
 
+  const uploadedPublicId = fakeMemory.imagePublicIds[0];
+
   const removeRes = await fetch(
     `${baseUrl}/api/memories/memory1/images/0`,
     {
@@ -318,4 +351,143 @@ test("memory image upload then remove: full round trip via Cloudinary-backed end
   assert.equal(removeBody.success, true);
   assert.equal(fakeMemory.images.length, 0);
   assert.equal(fakeMemory.imagePublicIds.length, 0);
+
+  // Confirms destroyCloudinaryAsset/cloudinary.uploader.destroy was
+  // actually called (through the stub, never the real SDK) with the
+  // exact public_id that was just uploaded - not just that the DB array
+  // shrank.
+  assert.deepEqual(destroyedPublicIds, [uploadedPublicId]);
+});
+
+test("memory image upload: a partial batch failure destroys the uploads that already succeeded and leaves the memory untouched", async () => {
+  const token = jwt.sign({ id: knownUserId }, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+  });
+
+  destroyedPublicIds = [];
+  fakeMemory.images = [];
+  fakeMemory.imagePublicIds = [];
+
+  const formData = new FormData();
+  // First file uploads successfully; second is rigged to fail via the
+  // "FAIL_UPLOAD" buffer-content marker the stub checks for.
+  formData.append(
+    "images",
+    new Blob([Buffer.from("photo-one-succeeds")], { type: "image/jpeg" }),
+    "one.jpg"
+  );
+  formData.append(
+    "images",
+    new Blob([Buffer.from("FAIL_UPLOAD-photo-two")], { type: "image/jpeg" }),
+    "two.jpg"
+  );
+
+  const res = await fetch(`${baseUrl}/api/memories/memory1/images`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  const body = await res.json();
+
+  // The error reaches the global error handler as a generic 500, since
+  // it's a genuine Cloudinary failure, not a validation error.
+  assert.equal(res.status, 500);
+  assert.equal(body.success, false);
+
+  // The memory document was never touched.
+  assert.equal(fakeMemory.images.length, 0);
+  assert.equal(fakeMemory.imagePublicIds.length, 0);
+
+  // The one upload that DID succeed before the second one failed was
+  // destroyed, so it isn't orphaned in Cloudinary.
+  assert.deepEqual(destroyedPublicIds, [
+    "pathly/memories/photo-one-succeeds",
+  ]);
+});
+
+test("trip cover image: replacing a Cloudinary upload with a plain URL clears the stale public_id", async () => {
+  const token = jwt.sign({ id: knownUserId }, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+  });
+
+  destroyedPublicIds = [];
+
+  const tripWithCloudinaryCover = {
+    _id: "trip-cover-swap",
+    createdBy: knownUserId,
+    startDate: null,
+    endDate: null,
+    coverImage:
+      "https://res.cloudinary.com/demo/image/upload/v1/pathly/trips/old-cover.jpg",
+    coverImagePublicId: "pathly/trips/old-cover",
+    save: async function () {
+      return this;
+    },
+    populate: async function () {
+      return this;
+    },
+  };
+
+  fakeTrips["trip-cover-swap"] = tripWithCloudinaryCover;
+
+  const res = await fetch(`${baseUrl}/api/trips/trip-cover-swap`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      coverImage: "https://example.com/some-external-photo.jpg",
+    }),
+  });
+  const body = await res.json();
+
+  assert.equal(res.status, 200);
+  assert.equal(body.trip.coverImage, "https://example.com/some-external-photo.jpg");
+  // The stale public_id must be cleared, not left pointing at an asset
+  // that was just destroyed below.
+  assert.equal(body.trip.coverImagePublicId, "");
+  assert.deepEqual(destroyedPublicIds, ["pathly/trips/old-cover"]);
+});
+
+test("location cover image: replacing a Cloudinary upload with a plain URL clears the stale public_id", async () => {
+  const token = jwt.sign({ id: knownUserId }, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+  });
+
+  destroyedPublicIds = [];
+
+  const locationWithCloudinaryCover = {
+    _id: "location-cover-swap",
+    createdBy: knownUserId,
+    coverImage:
+      "https://res.cloudinary.com/demo/image/upload/v1/pathly/locations/old-cover.jpg",
+    coverImagePublicId: "pathly/locations/old-cover",
+    save: async function () {
+      return this;
+    },
+  };
+
+  fakeLocations["location-cover-swap"] = locationWithCloudinaryCover;
+
+  const res = await fetch(`${baseUrl}/api/locations/location-cover-swap`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      address: "Somewhere",
+      coverImage: "https://example.com/some-external-photo.jpg",
+    }),
+  });
+  const body = await res.json();
+
+  assert.equal(res.status, 200);
+  assert.equal(
+    body.location.coverImage,
+    "https://example.com/some-external-photo.jpg"
+  );
+  assert.equal(body.location.coverImagePublicId, "");
+  assert.deepEqual(destroyedPublicIds, ["pathly/locations/old-cover"]);
 });
