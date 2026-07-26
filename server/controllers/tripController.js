@@ -1,9 +1,9 @@
 const Trip = require("../models/Trip");
 const { deleteLocationsForTrip } = require("../utils/cascadeDelete");
 const {
-  deleteLocalUploadedFiles,
-  deleteFilesByAbsolutePath,
-} = require("../utils/mediaCleanup");
+  uploadBufferToCloudinary,
+  destroyCloudinaryAsset,
+} = require("../utils/cloudinaryUpload");
 
 const hasInvalidDateRange = (startDate, endDate) => {
   return Boolean(
@@ -27,14 +27,18 @@ const createTrip = async (req, res, next) => {
 
     // An uploaded file always wins over a plain coverImage URL string,
     // so a client can still fall back to pasting an external URL.
-    const coverImagePath = req.file
-      ? `/uploads/${req.file.filename}`
-      : coverImage || "";
+    let coverImagePath = coverImage || "";
+    let coverImagePublicId = "";
 
-    // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed working end-to-end.
-    console.log("[DEBUG createTrip] req.file:", req.file);
-    console.log("[DEBUG createTrip] req.body keys:", Object.keys(req.body));
-    console.log("[DEBUG createTrip] coverImagePath to save:", coverImagePath);
+    if (req.file) {
+      const uploaded = await uploadBufferToCloudinary(
+        req.file.buffer,
+        "pathly/trips"
+      );
+
+      coverImagePath = uploaded.url;
+      coverImagePublicId = uploaded.publicId;
+    }
 
     let trip;
 
@@ -46,19 +50,15 @@ const createTrip = async (req, res, next) => {
         startDate,
         endDate,
         coverImage: coverImagePath,
+        coverImagePublicId,
         createdBy: req.user._id,
         participants: [req.user._id],
       });
-
-      // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed working end-to-end.
-      console.log(
-        "[DEBUG createTrip] trip.coverImage after Trip.create:",
-        trip.coverImage
-      );
     } catch (createError) {
-      // The trip was never saved - remove the uploaded file so it isn't orphaned on disk.
-      if (req.file) {
-        await deleteFilesByAbsolutePath([req.file.path]);
+      // The trip was never saved - remove the just-uploaded Cloudinary
+      // asset so it isn't orphaned with no matching database record.
+      if (coverImagePublicId) {
+        await destroyCloudinaryAsset(coverImagePublicId);
       }
 
       throw createError;
@@ -135,13 +135,6 @@ const updateTrip = async (req, res, next) => {
     });
 
     if (!trip) {
-      // The request is rejected before the trip is touched, so an
-      // uploaded file (if any) would never be referenced by anything -
-      // remove it instead of leaving it orphaned on disk.
-      if (req.file) {
-        await deleteFilesByAbsolutePath([req.file.path]);
-      }
-
       return res.status(404).json({
         success: false,
         message: "Trip not found or you are not allowed to update it",
@@ -159,10 +152,6 @@ const updateTrip = async (req, res, next) => {
         : trip.endDate;
 
     if (hasInvalidDateRange(nextStartDate, nextEndDate)) {
-      if (req.file) {
-        await deleteFilesByAbsolutePath([req.file.path]);
-      }
-
       return res.status(400).json({
         success: false,
         message: "End date must be on or after start date",
@@ -170,22 +159,24 @@ const updateTrip = async (req, res, next) => {
     }
 
     const previousCoverImage = trip.coverImage;
+    const previousCoverImagePublicId = trip.coverImagePublicId;
     const updates = { ...req.body };
-
-    // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed working end-to-end.
-    console.log("[DEBUG updateTrip] req.file:", req.file);
-    console.log("[DEBUG updateTrip] req.body keys:", Object.keys(req.body));
-    console.log(
-      "[DEBUG updateTrip] previousCoverImage:",
-      previousCoverImage
-    );
+    let newCoverImagePublicId = "";
 
     // A new file replaces the cover image; an explicit removeCoverImage
     // flag clears it; otherwise Object.assign leaves it untouched.
     if (req.file) {
-      updates.coverImage = `/uploads/${req.file.filename}`;
+      const uploaded = await uploadBufferToCloudinary(
+        req.file.buffer,
+        "pathly/trips"
+      );
+
+      updates.coverImage = uploaded.url;
+      updates.coverImagePublicId = uploaded.publicId;
+      newCoverImagePublicId = uploaded.publicId;
     } else if (updates.removeCoverImage) {
       updates.coverImage = "";
+      updates.coverImagePublicId = "";
     }
 
     delete updates.removeCoverImage;
@@ -194,28 +185,23 @@ const updateTrip = async (req, res, next) => {
 
     try {
       await trip.save();
-
-      // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed working end-to-end.
-      console.log(
-        "[DEBUG updateTrip] trip.coverImage after save:",
-        trip.coverImage
-      );
     } catch (saveError) {
-      if (req.file) {
-        await deleteFilesByAbsolutePath([req.file.path]);
+      // The DB write failed - remove the just-uploaded replacement asset
+      // (the previous one, if any, is still referenced and stays intact).
+      if (newCoverImagePublicId) {
+        await destroyCloudinaryAsset(newCoverImagePublicId);
       }
 
       throw saveError;
     }
 
-    // Remove the old file only after a successful save, and only if it
-    // was actually replaced/cleared and was a local upload.
+    // Remove the old asset only after a successful save, and only if it
+    // was actually replaced/cleared.
     if (
-      previousCoverImage &&
-      previousCoverImage !== trip.coverImage &&
-      (req.file || req.body.removeCoverImage)
+      previousCoverImagePublicId &&
+      previousCoverImage !== trip.coverImage
     ) {
-      await deleteLocalUploadedFiles([previousCoverImage]);
+      await destroyCloudinaryAsset(previousCoverImagePublicId);
     }
 
     await trip.populate("createdBy", "name");
@@ -230,8 +216,8 @@ const updateTrip = async (req, res, next) => {
   }
 };
 
-// Delete a trip by ID, along with every location, memory and locally
-// uploaded file that belongs to it.
+// Delete a trip by ID, along with every location, memory and uploaded
+// Cloudinary asset that belongs to it.
 const deleteTrip = async (req, res, next) => {
   try {
     const trip = await Trip.findOne({
@@ -247,7 +233,7 @@ const deleteTrip = async (req, res, next) => {
     }
 
     await deleteLocationsForTrip(trip._id);
-    await deleteLocalUploadedFiles([trip.coverImage]);
+    await destroyCloudinaryAsset(trip.coverImagePublicId);
     await trip.deleteOne();
 
     res.status(204).send();

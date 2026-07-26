@@ -14,6 +14,14 @@ const memorySchema = new mongoose.Schema(
       },
     ],
 
+    // Cloudinary public_ids, in the same order as images, needed to
+    // delete each asset individually.
+    imagePublicIds: [
+      {
+        type: String,
+      },
+    ],
+
     videos: [
       {
         type: String,

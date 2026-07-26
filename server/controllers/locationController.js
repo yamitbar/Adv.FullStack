@@ -3,9 +3,9 @@ const Location = require("../models/Location");
 const { deleteMemoriesForLocation } = require("../utils/cascadeDelete");
 const { isTripMember } = require("../utils/tripMembership");
 const {
-  deleteLocalUploadedFiles,
-  deleteFilesByAbsolutePath,
-} = require("../utils/mediaCleanup");
+  uploadBufferToCloudinary,
+  destroyCloudinaryAsset,
+} = require("../utils/cloudinaryUpload");
 
 // Create a new location inside a trip
 const createLocation = async (req, res, next) => {
@@ -15,11 +15,6 @@ const createLocation = async (req, res, next) => {
     const trip = await Trip.findById(tripId);
 
     if (!trip) {
-      // No location exists yet to attach the file to - remove it instead of leaving it orphaned.
-      if (req.file) {
-        await deleteFilesByAbsolutePath([req.file.path]);
-      }
-
       return res.status(404).json({
         success: false,
         message: "Trip not found",
@@ -27,10 +22,6 @@ const createLocation = async (req, res, next) => {
     }
 
     if (!isTripMember(trip, req.user._id)) {
-      if (req.file) {
-        await deleteFilesByAbsolutePath([req.file.path]);
-      }
-
       return res.status(403).json({
         success: false,
         message: "You are not allowed to add locations to this trip",
@@ -38,14 +29,18 @@ const createLocation = async (req, res, next) => {
     }
 
     // An uploaded file always wins over a plain coverImage URL string.
-    const coverImage = req.file
-      ? `/uploads/${req.file.filename}`
-      : req.body.coverImage || "";
+    let coverImage = req.body.coverImage || "";
+    let coverImagePublicId = "";
 
-    // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed working end-to-end.
-    console.log("[DEBUG createLocation] req.file:", req.file);
-    console.log("[DEBUG createLocation] req.body keys:", Object.keys(req.body));
-    console.log("[DEBUG createLocation] coverImage to save:", coverImage);
+    if (req.file) {
+      const uploaded = await uploadBufferToCloudinary(
+        req.file.buffer,
+        "pathly/locations"
+      );
+
+      coverImage = uploaded.url;
+      coverImagePublicId = uploaded.publicId;
+    }
 
     let location;
 
@@ -53,18 +48,15 @@ const createLocation = async (req, res, next) => {
       location = await Location.create({
         ...req.body,
         coverImage,
+        coverImagePublicId,
         trip: tripId,
         createdBy: req.user._id,
       });
-
-      // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed working end-to-end.
-      console.log(
-        "[DEBUG createLocation] location.coverImage after create:",
-        location.coverImage
-      );
     } catch (createError) {
-      if (req.file) {
-        await deleteFilesByAbsolutePath([req.file.path]);
+      // The location was never saved - remove the just-uploaded
+      // Cloudinary asset so it isn't orphaned with no matching record.
+      if (coverImagePublicId) {
+        await destroyCloudinaryAsset(coverImagePublicId);
       }
 
       throw createError;
@@ -160,10 +152,6 @@ const updateLocation = async (req, res, next) => {
     const location = await Location.findById(req.params.id);
 
     if (!location) {
-      if (req.file) {
-        await deleteFilesByAbsolutePath([req.file.path]);
-      }
-
       return res.status(404).json({
         success: false,
         message: "Location not found",
@@ -175,10 +163,6 @@ const updateLocation = async (req, res, next) => {
       req.user._id.toString();
 
     if (!isLocationCreator) {
-      if (req.file) {
-        await deleteFilesByAbsolutePath([req.file.path]);
-      }
-
       return res.status(403).json({
         success: false,
         message: "Only the location creator can update this location",
@@ -186,25 +170,24 @@ const updateLocation = async (req, res, next) => {
     }
 
     const previousCoverImage = location.coverImage;
+    const previousCoverImagePublicId = location.coverImagePublicId;
     const updates = { ...req.body };
-
-    // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed working end-to-end.
-    console.log("[DEBUG updateLocation] req.file:", req.file);
-    console.log(
-      "[DEBUG updateLocation] req.body keys:",
-      Object.keys(req.body)
-    );
-    console.log(
-      "[DEBUG updateLocation] previousCoverImage:",
-      previousCoverImage
-    );
+    let newCoverImagePublicId = "";
 
     // A new file replaces the cover image; an explicit removeCoverImage
     // flag clears it; otherwise Object.assign leaves it untouched.
     if (req.file) {
-      updates.coverImage = `/uploads/${req.file.filename}`;
+      const uploaded = await uploadBufferToCloudinary(
+        req.file.buffer,
+        "pathly/locations"
+      );
+
+      updates.coverImage = uploaded.url;
+      updates.coverImagePublicId = uploaded.publicId;
+      newCoverImagePublicId = uploaded.publicId;
     } else if (updates.removeCoverImage) {
       updates.coverImage = "";
+      updates.coverImagePublicId = "";
     }
 
     delete updates.removeCoverImage;
@@ -229,28 +212,23 @@ const updateLocation = async (req, res, next) => {
 
     try {
       updatedLocation = await location.save();
-
-      // TEMPORARY DEBUG LOGGING - remove once image upload is confirmed working end-to-end.
-      console.log(
-        "[DEBUG updateLocation] coverImage after save:",
-        updatedLocation.coverImage
-      );
     } catch (saveError) {
-      if (req.file) {
-        await deleteFilesByAbsolutePath([req.file.path]);
+      // The DB write failed - remove the just-uploaded replacement asset
+      // (the previous one, if any, is still referenced and stays intact).
+      if (newCoverImagePublicId) {
+        await destroyCloudinaryAsset(newCoverImagePublicId);
       }
 
       throw saveError;
     }
 
-    // Remove the old file only after a successful save, and only if it
-    // was actually replaced/cleared and was a local upload.
+    // Remove the old asset only after a successful save, and only if it
+    // was actually replaced/cleared.
     if (
-      previousCoverImage &&
-      previousCoverImage !== updatedLocation.coverImage &&
-      (req.file || req.body.removeCoverImage)
+      previousCoverImagePublicId &&
+      previousCoverImage !== updatedLocation.coverImage
     ) {
-      await deleteLocalUploadedFiles([previousCoverImage]);
+      await destroyCloudinaryAsset(previousCoverImagePublicId);
     }
 
     res.status(200).json({
@@ -262,8 +240,8 @@ const updateLocation = async (req, res, next) => {
   }
 };
 
-// Delete a location, along with every memory and locally uploaded file
-// that belongs to it.
+// Delete a location, along with every memory and Cloudinary asset that
+// belongs to it.
 const deleteLocation = async (req, res, next) => {
   try {
     const location = await Location.findById(req.params.id);
@@ -287,7 +265,7 @@ const deleteLocation = async (req, res, next) => {
     }
 
     await deleteMemoriesForLocation(location._id);
-    await deleteLocalUploadedFiles([location.coverImage]);
+    await destroyCloudinaryAsset(location.coverImagePublicId);
     await location.deleteOne();
 
     res.status(200).json({

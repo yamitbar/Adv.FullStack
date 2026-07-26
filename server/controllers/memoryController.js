@@ -1,12 +1,11 @@
-const path = require("path");
-
 const Location = require("../models/Location");
 const Trip = require("../models/Trip");
 const Memory = require("../models/Memory");
 const {
-  deleteLocalUploadedFiles,
-  deleteFilesByAbsolutePath,
-} = require("../utils/mediaCleanup");
+  uploadBufferToCloudinary,
+  destroyCloudinaryAsset,
+  destroyCloudinaryAssets,
+} = require("../utils/cloudinaryUpload");
 const { isTripMember } = require("../utils/tripMembership");
 
 // Create a memory
@@ -190,7 +189,7 @@ const updateMemory = async (req, res, next) => {
   }
 };
 
-// Delete memory, along with any locally uploaded files it references
+// Delete memory, along with any Cloudinary images it references
 const deleteMemory = async (req, res, next) => {
   try {
     const memory = await Memory.findById(req.params.id);
@@ -213,7 +212,7 @@ const deleteMemory = async (req, res, next) => {
       });
     }
 
-    await deleteLocalUploadedFiles(memory.images);
+    await destroyCloudinaryAssets(memory.imagePublicIds);
     await memory.deleteOne();
 
     res.status(200).json({
@@ -227,10 +226,12 @@ const deleteMemory = async (req, res, next) => {
 
 // Remove a single image from a memory, keeping the memory and its text
 // intact. Only the memory creator may do this, matching the same
-// authorization rule used everywhere else on memories.
+// authorization rule used everywhere else on memories. Identified by its
+// array index (Cloudinary public_ids can contain "/", so they cannot be
+// used directly as a route param the way a local filename could).
 const removeMemoryImage = async (req, res, next) => {
   try {
-    const { id, filename } = req.params;
+    const { id, index } = req.params;
 
     const memory = await Memory.findById(id);
 
@@ -252,39 +253,35 @@ const removeMemoryImage = async (req, res, next) => {
       });
     }
 
-    // path.basename strips any "../" or "/" segments, so a crafted
-    // filename can never point outside the uploads directory. If the
-    // request's filename doesn't survive that unchanged, it was never a
-    // plain filename to begin with - reject it instead of guessing.
-    const safeFileName = path.basename(filename || "");
+    const imageIndex = Number(index);
 
-    if (!safeFileName || safeFileName !== filename) {
+    if (
+      !Number.isInteger(imageIndex) ||
+      imageIndex < 0 ||
+      imageIndex >= memory.images.length
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Invalid image filename",
+        message: "Invalid image index",
       });
     }
 
-    const storedPath = `/uploads/${safeFileName}`;
-    const imageIndex = memory.images.indexOf(storedPath);
-
-    if (imageIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: "This image does not belong to this memory",
-      });
-    }
+    const publicIdToRemove = memory.imagePublicIds?.[imageIndex];
 
     memory.images.splice(imageIndex, 1);
+
+    if (memory.imagePublicIds) {
+      memory.imagePublicIds.splice(imageIndex, 1);
+    }
 
     await memory.save();
     await memory.populate("createdBy", "name");
 
-    // Remove the file from disk after the database update succeeds, so
-    // a failed save never leaves the Memory document pointing at a
-    // deleted file. A failure here is logged but never blocks the
-    // response - the document is already the source of truth.
-    await deleteLocalUploadedFiles([storedPath]);
+    // Remove the asset from Cloudinary after the database update
+    // succeeds, so a failed save never leaves the Memory document
+    // pointing at a deleted image. A failure here is logged but never
+    // blocks the response - the document is already the source of truth.
+    await destroyCloudinaryAsset(publicIdToRemove);
 
     res.status(200).json({
       success: true,
@@ -309,12 +306,21 @@ const uploadMemoryImages = async (req, res, next) => {
     });
   }
 
-  const imagePaths = req.files.map(
-    (file) => `/uploads/${file.filename}`
-  );
+  let uploaded;
 
   try {
-    memory.images.push(...imagePaths);
+    uploaded = await Promise.all(
+      req.files.map((file) =>
+        uploadBufferToCloudinary(file.buffer, "pathly/memories")
+      )
+    );
+  } catch (error) {
+    return next(error);
+  }
+
+  try {
+    memory.images.push(...uploaded.map((item) => item.url));
+    memory.imagePublicIds.push(...uploaded.map((item) => item.publicId));
 
     await memory.save();
     await memory.populate("createdBy", "name");
@@ -326,9 +332,9 @@ const uploadMemoryImages = async (req, res, next) => {
       memory,
     });
   } catch (error) {
-    await deleteFilesByAbsolutePath(
-      req.files.map((file) => file.path)
-    );
+    // The DB save failed - remove the just-uploaded assets so they
+    // aren't orphaned with no matching database record.
+    await destroyCloudinaryAssets(uploaded.map((item) => item.publicId));
 
     next(error);
   }

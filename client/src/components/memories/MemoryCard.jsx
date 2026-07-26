@@ -30,13 +30,6 @@ import {
   uploadMemoryImages,
 } from "../../store/slices/memoriesSlice";
 
-// Stored image paths always look like "/uploads/<filename>" (see
-// memoryController.js). The filename alone is what the remove-image
-// route expects.
-function getImageFilename(imagePath) {
-  return imagePath.split("/").pop();
-}
-
 import "./MemoryCard.css";
 
 function formatDateTime(dateValue) {
@@ -138,9 +131,7 @@ function MemoryCard({ memory }) {
     dispatch(deleteMemory(memory._id));
   };
 
-  const handleRemoveImage = (imagePath) => {
-    const filename = getImageFilename(imagePath);
-
+  const handleRemoveImage = (index) => {
     const confirmed = window.confirm(
       "Remove this image? The rest of the memory will stay."
     );
@@ -152,7 +143,7 @@ function MemoryCard({ memory }) {
     dispatch(
       removeMemoryImage({
         memoryId: memory._id,
-        filename,
+        index,
       })
     );
   };
@@ -276,13 +267,10 @@ function MemoryCard({ memory }) {
 
       {memory.images && memory.images.length > 0 && (
         <div className="memory-card-images">
-          {memory.images.map((imagePath) => {
-            const filename =
-              getImageFilename(imagePath);
-
+          {memory.images.map((imagePath, index) => {
             const isRemovingThisImage =
               removingImage?.memoryId === memory._id &&
-              removingImage?.filename === filename;
+              removingImage?.index === index;
 
             const imageUrl = resolveMediaUrl(
               imagePath
@@ -320,7 +308,7 @@ function MemoryCard({ memory }) {
                     className="memory-card-image-remove"
                     aria-label="Remove this image"
                     onClick={() =>
-                      handleRemoveImage(imagePath)
+                      handleRemoveImage(index)
                     }
                     disabled={isRemovingThisImage}
                   >

@@ -102,17 +102,17 @@ export const uploadMemoryImages = createAsyncThunk(
 
 export const removeMemoryImage = createAsyncThunk(
   "memories/removeMemoryImage",
-  async ({ memoryId, filename }, thunkAPI) => {
+  async ({ memoryId, index }, thunkAPI) => {
     try {
       const { data } = await api.delete(
-        `/memories/${memoryId}/images/${encodeURIComponent(filename)}`
+        `/memories/${memoryId}/images/${index}`
       );
 
       return data.memory;
     } catch (error) {
       return thunkAPI.rejectWithValue({
         memoryId,
-        filename,
+        index,
         message: getErrorMessage(
           error,
           "Failed to remove image"
@@ -301,7 +301,7 @@ const memoriesSlice = createSlice({
         (state, action) => {
           state.removingImage = {
             memoryId: action.meta.arg.memoryId,
-            filename: action.meta.arg.filename,
+            index: action.meta.arg.index,
           };
           state.removeImageError = null;
         }

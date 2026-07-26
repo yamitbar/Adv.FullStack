@@ -52,10 +52,10 @@ memoryRouter.post(
 );
 
 // Remove a single image from a memory without deleting the memory
-// itself. Uses the plain stored filename (e.g. "169..." not the full
-// "/uploads/169..." path) as the route param.
+// itself. Identified by its position in the memory's images array
+// (Cloudinary public_ids may contain "/" so they can't be a route param).
 memoryRouter.delete(
-  "/:id/images/:filename",
+  "/:id/images/:index",
   protect,
   removeMemoryImage
 );

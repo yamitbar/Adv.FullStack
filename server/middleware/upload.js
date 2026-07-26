@@ -1,32 +1,9 @@
 const multer = require("multer");
-const path = require("path");
-const {
-  UPLOADS_DIR,
-  ensureUploadsDir,
-} = require("../utils/mediaCleanup");
 
-// Multer does not create its destination directory, and "uploads/" is
-// gitignored so it will not exist on a clean clone or a fresh deploy.
-// Create it once when this module is first loaded.
-ensureUploadsDir();
-
-// Configure where uploaded files are stored
-const storage = multer.diskStorage({
-  destination: (req, file, callback) => {
-    callback(null, UPLOADS_DIR);
-  },
-
-  filename: (req, file, callback) => {
-    const uniqueName = `${Date.now()}-${Math.round(
-      Math.random() * 1e9
-    )}`;
-
-    callback(
-      null,
-      uniqueName + path.extname(file.originalname).toLowerCase()
-    );
-  },
-});
+// Images are held in memory only long enough to be streamed to
+// Cloudinary in the controller - nothing is written to local disk, so
+// there is no local file to orphan if validation or the upload fails.
+const storage = multer.memoryStorage();
 
 // Allow image files only
 const imageFileFilter = (req, file, callback) => {

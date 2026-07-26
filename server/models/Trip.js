@@ -36,6 +36,13 @@ const tripSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Cloudinary public_id for coverImage, needed to delete/replace the
+    // asset. Empty when coverImage is a plain external URL, not an upload.
+    coverImagePublicId: {
+      type: String,
+      default: "",
+    },
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
